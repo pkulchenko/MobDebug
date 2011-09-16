@@ -55,21 +55,31 @@ local socket = (function ()
         return s
       end
       self.send = function(self, msg) 
+        print("DBG send: " .. msg)
         local numberOfBytes = stringToBuffer(msg, outBuffer)
         maConnWrite(connection, outBuffer, numberOfBytes)
       end
       self.receive = function(self) 
         local line = ""
-        while true do
+        local event = SysEventCreate()
+        print("DBG receive: before loop")
+        while not line:find("\n") do
           maConnRead(connection, inBuffer, 1000)
-          -- since maConnRead is async, how do I get the number
-          -- of bytes read and how do I know when the operation is complete?
-          -- ideally, I'd prefer to block here until the read is done
-          -- without blocking the thread or doing busy loop.
-          -- does connection.result give me that information?
-          line = line .. bufferToString(inBuffer, len)
-          if line:find("\n") then break end
+          maWait(0);
+          maGetEvent(event)
+          local eventType = SysEventGetType(event)
+          print("DBG receive: got event " .. eventType .. ' vs. ' .. EVENT_TYPE_CONN);
+          if (EVENT_TYPE_CONN == eventType and
+              SysEventGetConnHandle(event) == connection and
+              SysEventGetConnOpType(event) == CONNOP_READ) then
+            local result = SysEventGetConnResult(event);
+            print("DBG receive: got event with result " .. result);
+            if result > 0 then line = line .. bufferToString(inBuffer, result) end
+            print("DBG receive: got line '" .. line .. "'");
+          end  
         end
+        print("DBG receive: got line: " .. line)
+        --SysFree(event)
         return line
       end
       self.close = function(self) 
@@ -223,6 +233,7 @@ local function debugger_loop(server)
   while true do
     local line = server:receive()
     command = string.sub(line, string.find(line, "^[A-Z]+"))
+    print("DBG: got command " .. command)
     if command == "SETB" then
       local _, _, _, filename, line = string.find(line, "^([A-Z]+)%s+([%w%p]+)%s+(%d+)$")
       if filename and line then
@@ -294,8 +305,12 @@ local function debugger_loop(server)
     elseif command == "STEP" then
       server:send("200 OK\n")
       step_into = true
+      print("DBG yielding")
       local ev, vars, file, line, idx_watch = coroutine.yield()
+      file = "(interpreter)"
+      print("DBG yielded " .. line)
       eval_env = vars
+      print("DBG STEP " .. ev)
       if ev == events.BREAK then
         server:send("202 Paused " .. file .. " " .. line .. "\n")
       elseif ev == events.WATCH then
@@ -359,3 +374,70 @@ function start()
     return coroutine.resume(coro_debugger, server)
   end
 end
+
+server = socket.connect("192.168.1.111", 8171)
+debug.sethook(debug_hook, "lcr")
+coroutine.resume(coro_debugger, server)
+
+print("Start")
+
+--[[
+function bar()
+  print("In bar 1")
+  print("In bar 2")
+end
+
+for i = 1, 3 do
+  print("Loop")
+  bar()
+  tab.foo = tab.foo * 2
+end
+
+print("End")
+
+print(connection)
+
+line = ""
+connection = maConnect("socket://192.168.1.111:8171")
+inBuffer = SysBufferCreate(1000)
+maConnRead(connection, inBuffer, 1000)
+if connection.result > 0 then line = line .. bufferToString(inBuffer, connection.result) end
+if line:find("\n") then break end
+
+
+      function bufferToString(buffer, len)
+        local s = ""
+        for i = 0, len - 1 do
+          local c = SysBufferGetByte(buffer, i)
+          s = s .. string.char(c)
+        end
+        return s
+      end
+
+line = ""
+connection = maConnect("socket://192.168.1.111:8171")
+inBuffer = SysBufferCreate(1000)
+
+         event = SysEventCreate()
+         print("receive: before loop")
+
+          maConnRead(connection, inBuffer, 1000)
+          while true do
+            maWait(0);
+            maGetEvent(event)
+            eventType = SysEventGetType(event)
+            print("receive: got event " .. eventType);
+          if (EVENT_TYPE_CONN == eventType and
+              SysEventGetConnHandle(event) == connection and
+              SysEventGetConnOpType(event) == CONNOP_READ) then
+            result = SysEventGetConnResult(event);
+            print("receive: got event with result = " .. result);
+            break
+          end 
+          end
+          print(line)
+          print("event " .. SysEventGetConnOpType(event) .. ' ' .. CONNOP_READ)
+            if result > 0 then line = line .. bufferToString(inBuffer, result) end
+            if line:find("\n") then break end
+          end  
+]]
