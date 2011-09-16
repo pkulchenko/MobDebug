@@ -4,7 +4,7 @@
 --
 
 -- this is a socket class that implements socket.lua interface for remDebug
-local socketA = (function () 
+local socket = (function () 
   local self = {}
   self.connect = function(host, port)
     local socket = require "socket"
@@ -29,7 +29,7 @@ local socketA = (function ()
 end)()
 
 -- this is a socket class that implements maConnect interface for remDebug
-local socket = (function () 
+local socketR = (function () 
   local self = {}
   self.connect = function(host, port)
     local connection = maConnect("socket://" .. host .. ":" .. port)
@@ -99,7 +99,7 @@ local watches = {}
 local step_into = false
 local step_over = false
 local step_level = 0
-local stack_level = 0
+local stack_level = 2 -- takes into account return from engine.start
 
 local controller_host = "192.168.1.111"
 local controller_port = 8171
@@ -189,6 +189,12 @@ local function merge_paths(path1, path2)
 end
 
 local function debug_hook(event, line)
+  if false then -- DEBUG
+    if line then print("hook: " .. event .. " at " .. line)
+    else print("hook: " .. event)
+    end
+    print(stack_level)
+  end
   if event == "call" then
     stack_level = stack_level + 1
   elseif event == "return" then
