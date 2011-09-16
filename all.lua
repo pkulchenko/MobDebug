@@ -59,22 +59,6 @@ local socket = (function ()
         print("DBG send: " .. msg)
         local numberOfBytes = stringToBuffer(msg, outBuffer)
         maConnWrite(connection, outBuffer, numberOfBytes)
---[[
-        while numberOfBytes > 0 do
-          maWait(0)
-          maGetEvent(event)
-          local eventType = SysEventGetType(event)
-          print("DBG send: got event " .. eventType .. ' vs. ' .. EVENT_TYPE_CONN);
-          if (EVENT_TYPE_CONN == eventType and
-              SysEventGetConnHandle(event) == connection and
-              SysEventGetConnOpType(event) == CONNOP_WRITE) then
-            local result = SysEventGetConnResult(event);
-            print("DBG send: got event with result " .. result);
-            if result > 0 then numberOfBytes = numberOfBytes - result end
-            break; -- got the event we wanted; now check if we have all we need
-          end  
-        end
-]]
       end
       self.receive = function(self) 
         local line = ""
@@ -312,6 +296,7 @@ local function debugger_loop(server)
     elseif command == "RUN" then
       server:send("200 OK\n")
       local ev, vars, file, line, idx_watch = coroutine.yield()
+      file = "(interpreter)"
       eval_env = vars
       if ev == events.BREAK then
         server:send("202 Paused " .. file .. " " .. line .. "\n")
@@ -378,86 +363,25 @@ end
 -- Tries to start the debug session by connecting with a controller
 --
 function start()
-  pcall(require, "remdebug.config")
   local server = socket.connect(controller_host, controller_port)
   if server then
     print("Connected to " .. controller_host .. ":" .. controller_port)
-    _TRACEBACK = function (message) 
-      local err = debug.traceback(message)
-      server:send("401 Error in Execution " .. string.len(err) .. "\n")
-      server:send(err)
-      server:close()
-      return err
-    end
     debug.sethook(debug_hook, "lcr")
     return coroutine.resume(coro_debugger, server)
   end
 end
 
-server = socket.connect("192.168.1.111", 8171)
-debug.sethook(debug_hook, "lcr")
-coroutine.resume(coro_debugger, server)
+-- application starts here
+
+remdebug.engine.start()
 
 print("Start")
-
-function bar()
-  print("In bar 1")
-  print("In bar 2")
-end
-
 for i = 1, 3 do
+  local function bar()
+    print("In bar")
+  end
   print("Loop")
   bar()
-  tab.foo = tab.foo * 2
 end
-
 print("End")
 
---[[
-
-print(connection)
-
-line = ""
-connection = maConnect("socket://192.168.1.111:8171")
-inBuffer = SysBufferCreate(1000)
-maConnRead(connection, inBuffer, 1000)
-if connection.result > 0 then line = line .. bufferToString(inBuffer, connection.result) end
-if line:find("\n") then break end
-
-
-      function bufferToString(buffer, len)
-        local s = ""
-        for i = 0, len - 1 do
-          local c = SysBufferGetByte(buffer, i)
-          s = s .. string.char(c)
-        end
-        return s
-      end
-
-line = ""
-connection = maConnect("socket://192.168.1.111:8171")
-inBuffer = SysBufferCreate(1000)
-
-         event = SysEventCreate()
-         print("receive: before loop")
-
-          maConnRead(connection, inBuffer, 1000)
-          while true do
-            maWait(0);
-            maGetEvent(event)
-            eventType = SysEventGetType(event)
-            print("receive: got event " .. eventType);
-          if (EVENT_TYPE_CONN == eventType and
-              SysEventGetConnHandle(event) == connection and
-              SysEventGetConnOpType(event) == CONNOP_READ) then
-            result = SysEventGetConnResult(event);
-            print("receive: got event with result = " .. result);
-            break
-          end 
-          end
-          print(line)
-          print("event " .. SysEventGetConnOpType(event) .. ' ' .. CONNOP_READ)
-            if result > 0 then line = line .. bufferToString(inBuffer, result) end
-            if line:find("\n") then break end
-          end  
-]]
