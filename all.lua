@@ -37,6 +37,7 @@ local socket = (function ()
       local self = {}
       local outBuffer = SysBufferCreate(1000)
       local inBuffer = SysBufferCreate(1000)
+      local event = SysEventCreate()
       function stringToBuffer(s, buffer)
         local i = 0
         for c in s:gmatch(".") do
@@ -58,33 +59,51 @@ local socket = (function ()
         print("DBG send: " .. msg)
         local numberOfBytes = stringToBuffer(msg, outBuffer)
         maConnWrite(connection, outBuffer, numberOfBytes)
+--[[
+        while numberOfBytes > 0 do
+          maWait(0)
+          maGetEvent(event)
+          local eventType = SysEventGetType(event)
+          print("DBG send: got event " .. eventType .. ' vs. ' .. EVENT_TYPE_CONN);
+          if (EVENT_TYPE_CONN == eventType and
+              SysEventGetConnHandle(event) == connection and
+              SysEventGetConnOpType(event) == CONNOP_WRITE) then
+            local result = SysEventGetConnResult(event);
+            print("DBG send: got event with result " .. result);
+            if result > 0 then numberOfBytes = numberOfBytes - result end
+            break; -- got the event we wanted; now check if we have all we need
+          end  
+        end
+]]
       end
       self.receive = function(self) 
         local line = ""
-        local event = SysEventCreate()
         print("DBG receive: before loop")
         while not line:find("\n") do
           maConnRead(connection, inBuffer, 1000)
-          maWait(0);
-          maGetEvent(event)
-          local eventType = SysEventGetType(event)
-          print("DBG receive: got event " .. eventType .. ' vs. ' .. EVENT_TYPE_CONN);
-          if (EVENT_TYPE_CONN == eventType and
-              SysEventGetConnHandle(event) == connection and
-              SysEventGetConnOpType(event) == CONNOP_READ) then
-            local result = SysEventGetConnResult(event);
-            print("DBG receive: got event with result " .. result);
-            if result > 0 then line = line .. bufferToString(inBuffer, result) end
-            print("DBG receive: got line '" .. line .. "'");
+          while true do
+            maWait(0)
+            maGetEvent(event)
+            local eventType = SysEventGetType(event)
+            print("DBG receive: got event " .. eventType .. ' vs. ' .. EVENT_TYPE_CONN);
+            if (EVENT_TYPE_CONN == eventType and
+                SysEventGetConnHandle(event) == connection and
+                SysEventGetConnOpType(event) == CONNOP_READ) then
+              local result = SysEventGetConnResult(event);
+              print("DBG receive: got event with result " .. result);
+              if result > 0 then line = line .. bufferToString(inBuffer, result) end
+              print("DBG receive: got line '" .. line .. "'");
+              break; -- got the event we wanted; now check if we have all we need
+            end
           end  
         end
         print("DBG receive: got line: " .. line)
-        --SysFree(event)
         return line
       end
       self.close = function(self) 
         SysBufferDelete(inBuffer)
         SysBufferDelete(outBuffer)
+        SysFree(event)
         maConnClose(connection)
       end
       return self
@@ -381,7 +400,6 @@ coroutine.resume(coro_debugger, server)
 
 print("Start")
 
---[[
 function bar()
   print("In bar 1")
   print("In bar 2")
@@ -394,6 +412,8 @@ for i = 1, 3 do
 end
 
 print("End")
+
+--[[
 
 print(connection)
 
