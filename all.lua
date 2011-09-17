@@ -1,10 +1,11 @@
 --
--- RemDebug 1.0 Beta
--- Copyright Kepler Project 2005 (http://www.keplerproject.org/remdebug)
+-- LuaRemDebug 0.1 Beta
+-- Copyright Paul Kulchenko 2011
+-- Based on RemDebug 1.0 (http://www.keplerproject.org/remdebug)
 --
 
 -- this is a socket class that implements socket.lua interface for remDebug
-local socketA = (function () 
+local socketLua = (function () 
   local self = {}
   self.connect = function(host, port)
     local socket = require "socket"
@@ -96,6 +97,11 @@ local socket = (function ()
 
   return self
 end)()
+
+--
+-- RemDebug 1.0 Beta
+-- Copyright Kepler Project 2005 (http://www.keplerproject.org/remdebug)
+--
 
 local debug = require"debug"
 
@@ -221,6 +227,9 @@ local function debug_hook(event, line)
       end
     end)
     if step_into or (step_over and stack_level <= step_level) or has_breakpoint(file, line) then
+      print("resume as " .. (step_into and 1 or 0) .. " or " 
+                         .. (step_over and 1 or 0) .. " or " 
+                         .. (has_breakpoint(file, line) and 1 or 0))
       step_into = false
       step_over = false
       coroutine.resume(coro_debugger, events.BREAK, vars, file, line)
@@ -295,6 +304,7 @@ local function debugger_loop(server)
       end
     elseif command == "RUN" then
       server:send("200 OK\n")
+      print("DBG: doing RUN with " .. (step_into and 1 or 0))
       local ev, vars, file, line, idx_watch = coroutine.yield()
       file = "(interpreter)"
       eval_env = vars
@@ -309,7 +319,7 @@ local function debugger_loop(server)
     elseif command == "STEP" then
       server:send("200 OK\n")
       step_into = true
-      print("DBG yielding")
+      print("DBG set step_into to true")
       local ev, vars, file, line, idx_watch = coroutine.yield()
       file = "(interpreter)"
       print("DBG yielded " .. line)
