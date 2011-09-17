@@ -57,32 +57,27 @@ local socket = (function ()
         return s
       end
       self.send = function(self, msg) 
-        print("DBG send: " .. msg)
         local numberOfBytes = stringToBuffer(msg, outBuffer)
         maConnWrite(connection, outBuffer, numberOfBytes)
       end
       self.receive = function(self) 
         local line = ""
-        print("DBG receive: before loop")
         while not line:find("\n") do
           maConnRead(connection, inBuffer, 1000)
           while true do
             maWait(0)
             maGetEvent(event)
             local eventType = SysEventGetType(event)
-            print("DBG receive: got event " .. eventType .. ' vs. ' .. EVENT_TYPE_CONN);
+            if (EVENT_TYPE_CLOSE == eventType) then maExit(0) end
             if (EVENT_TYPE_CONN == eventType and
                 SysEventGetConnHandle(event) == connection and
                 SysEventGetConnOpType(event) == CONNOP_READ) then
               local result = SysEventGetConnResult(event);
-              print("DBG receive: got event with result " .. result);
               if result > 0 then line = line .. bufferToString(inBuffer, result) end
-              print("DBG receive: got line '" .. line .. "'");
               break; -- got the event we wanted; now check if we have all we need
             end
           end  
         end
-        print("DBG receive: got line: " .. line)
         return line
       end
       self.close = function(self) 
@@ -119,9 +114,6 @@ local step_into = false
 local step_over = false
 local step_level = 0
 local stack_level = 0
-
-local controller_host = "192.168.1.111"
-local controller_port = 8171
 
 local function set_breakpoint(file, line)
   if not breakpoints[file] then
@@ -227,9 +219,6 @@ local function debug_hook(event, line)
       end
     end)
     if step_into or (step_over and stack_level <= step_level) or has_breakpoint(file, line) then
-      print("resume as " .. (step_into and 1 or 0) .. " or " 
-                         .. (step_over and 1 or 0) .. " or " 
-                         .. (has_breakpoint(file, line) and 1 or 0))
       step_into = false
       step_over = false
       coroutine.resume(coro_debugger, events.BREAK, vars, file, line)
@@ -245,7 +234,6 @@ local function debugger_loop(server)
   while true do
     local line = server:receive()
     command = string.sub(line, string.find(line, "^[A-Z]+"))
-    print("DBG: got command " .. command)
     if command == "SETB" then
       local _, _, _, filename, line = string.find(line, "^([A-Z]+)%s+([%w%p]+)%s+(%d+)$")
       if filename and line then
@@ -304,7 +292,6 @@ local function debugger_loop(server)
       end
     elseif command == "RUN" then
       server:send("200 OK\n")
-      print("DBG: doing RUN with " .. (step_into and 1 or 0))
       local ev, vars, file, line, idx_watch = coroutine.yield()
       file = "(interpreter)"
       eval_env = vars
@@ -319,12 +306,9 @@ local function debugger_loop(server)
     elseif command == "STEP" then
       server:send("200 OK\n")
       step_into = true
-      print("DBG set step_into to true")
       local ev, vars, file, line, idx_watch = coroutine.yield()
       file = "(interpreter)"
-      print("DBG yielded " .. line)
       eval_env = vars
-      print("DBG STEP " .. ev)
       if ev == events.BREAK then
         server:send("202 Paused " .. file .. " " .. line .. "\n")
       elseif ev == events.WATCH then
@@ -338,6 +322,7 @@ local function debugger_loop(server)
       step_over = true
       step_level = stack_level
       local ev, vars, file, line, idx_watch = coroutine.yield()
+      file = "(interpreter)"
       eval_env = vars
       if ev == events.BREAK then
         server:send("202 Paused " .. file .. " " .. line .. "\n")
@@ -356,23 +341,10 @@ end
 coro_debugger = coroutine.create(debugger_loop)
 
 --
--- remdebug.engine.config(tab)
--- Configures the engine
---
-function config(tab)
-  if tab.host then
-    controller_host = tab.host
-  end
-  if tab.port then
-    controller_port = tab.port
-  end
-end
-
---
 -- remdebug.engine.start()
 -- Tries to start the debug session by connecting with a controller
 --
-function start()
+function start(controller_host, controller_port)
   local server = socket.connect(controller_host, controller_port)
   if server then
     print("Connected to " .. controller_host .. ":" .. controller_port)
@@ -383,7 +355,7 @@ end
 
 -- application starts here
 
-remdebug.engine.start()
+remdebug.engine.start("192.168.1.111", 8171)
 
 print("Start")
 for i = 1, 3 do
