@@ -27,10 +27,10 @@ local socketLua = (function ()
   end
 
   return self
-end)()
+end)
 
 -- this is a socket class that implements maConnect interface for remDebug
-local socket = (function () 
+local socketMobileLua = (function () 
   local self = {}
   self.connect = function(host, port)
     local connection = maConnect("socket://" .. host .. ":" .. port)
@@ -91,7 +91,9 @@ local socket = (function ()
   end
 
   return self
-end)()
+end)
+
+local socket = maConnect and socketMobileLua() or socketLua()
 
 --
 -- RemDebug 1.0 Beta
