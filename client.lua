@@ -1,10 +1,27 @@
 --
--- LuaRemDebug 0.1 Beta
+-- MobDebug 0.1 Beta
 -- Copyright Paul Kulchenko 2011
 -- Based on RemDebug 1.0 (http://www.keplerproject.org/remdebug)
 --
 
-module("remdebug.engine", package.seeall)
+(function()
+
+local require = require
+local module = module
+local print = print
+local string = string
+local table = table
+local ipairs = ipairs
+local getfenv = getfenv
+local setmetatable = setmetatable
+local coroutine = coroutine
+local type = type
+
+module("remdebug.engine") -- no seeall, see http://lua-users.org/wiki/LuaModuleFunctionCritiqued
+
+_COPYRIGHT = "Paul Kulchenko"
+_DESCRIPTION = "Mobile Remote Debugger for the Lua programming language"
+_VERSION = "0.1"
 
 -- this is a socket class that implements socket.lua interface for remDebug
 local socketLua = (function () 
@@ -102,12 +119,7 @@ local socket = maConnect and socketMobileLua() or socketLua()
 -- Copyright Kepler Project 2005 (http://www.keplerproject.org/remdebug)
 --
 
-local debug = require"debug"
-
-_COPYRIGHT = "2006 - Kepler Project"
-_DESCRIPTION = "Remote Debugger for the Lua programming language"
-_VERSION = "1.0"
-
+local debug = require "debug"
 local coro_debugger
 local events = { BREAK = 1, WATCH = 2 }
 local breakpoints = {}
@@ -350,6 +362,8 @@ function start(controller_host, controller_port)
     return coroutine.resume(coro_debugger, server)
   end
 end
+
+end)()
 
 -- application starts here
 
