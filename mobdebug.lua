@@ -291,8 +291,8 @@ local function debugger_loop(server)
       end
     elseif command == "DELW" then
       local _, _, index = string.find(line, "^[A-Z]+%s+(%d+)$")
-      index = tonumber(index)
-      if index and watches[index] then
+      index = 0+index
+      if index > 0 and index <= #watches then
         watches[index] = emptyWatch
         server:send("200 OK\n") 
       else
