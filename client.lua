@@ -112,9 +112,7 @@ local coro_debugger
 local events = { BREAK = 1, WATCH = 2 }
 local breakpoints = {}
 local watches = {}
-local step_into = false
-local step_over = false
-local step_level = 0
+local step = { into = false, over = false, level = 0 }
 local stack_level = 0
 
 local function set_breakpoint(file, line)
@@ -212,17 +210,19 @@ local function debug_hook(event, line)
       file = string.sub(file, 2)
     end
     file = merge_paths(".", file) -- lfs.currentdir()
+    if not file then file = "(interpreter)" end
     local vars = capture_vars()
     table.foreach(watches, function (index, value)
       setfenv(value, vars)
       local status, res = pcall(value)
       if status and res then
         coroutine.resume(coro_debugger, events.WATCH, vars, file, line, index)
+        restore_vars(vars)
       end
     end)
-    if step_into or (step_over and stack_level <= step_level) or has_breakpoint(file, line) then
-      step_into = false
-      step_over = false
+    if step.into or (step.over and stack_level <= step.level) or has_breakpoint(file, line) then
+      step.into = false
+      step.over = false
       coroutine.resume(coro_debugger, events.BREAK, vars, file, line)
       restore_vars(vars)
     end
@@ -295,7 +295,6 @@ local function debugger_loop(server)
     elseif command == "RUN" then
       server:send("200 OK\n")
       local ev, vars, file, line, idx_watch = coroutine.yield()
-      file = "(interpreter)"
       eval_env = vars
       if ev == events.BREAK then
         server:send("202 Paused " .. file .. " " .. line .. "\n")
@@ -307,9 +306,8 @@ local function debugger_loop(server)
       end
     elseif command == "STEP" then
       server:send("200 OK\n")
-      step_into = true
+      step.into = true
       local ev, vars, file, line, idx_watch = coroutine.yield()
-      file = "(interpreter)"
       eval_env = vars
       if ev == events.BREAK then
         server:send("202 Paused " .. file .. " " .. line .. "\n")
@@ -321,10 +319,9 @@ local function debugger_loop(server)
       end
     elseif command == "OVER" then
       server:send("200 OK\n")
-      step_over = true
-      step_level = stack_level
+      step.over = true
+      step.level = stack_level
       local ev, vars, file, line, idx_watch = coroutine.yield()
-      file = "(interpreter)"
       eval_env = vars
       if ev == events.BREAK then
         server:send("202 Paused " .. file .. " " .. line .. "\n")
