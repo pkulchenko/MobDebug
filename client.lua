@@ -4,6 +4,8 @@
 -- Based on RemDebug 1.0 (http://www.keplerproject.org/remdebug)
 --
 
+module("remdebug.engine", package.seeall)
+
 -- this is a socket class that implements socket.lua interface for remDebug
 local socketLua = (function () 
   local self = {}
@@ -101,8 +103,6 @@ local socket = maConnect and socketMobileLua() or socketLua()
 --
 
 local debug = require"debug"
-
-module("remdebug.engine", package.seeall)
 
 _COPYRIGHT = "2006 - Kepler Project"
 _DESCRIPTION = "Remote Debugger for the Lua programming language"
@@ -337,8 +337,6 @@ local function debugger_loop(server)
   end
 end
 
-coro_debugger = coroutine.create(debugger_loop)
-
 --
 -- remdebug.engine.start()
 -- Tries to start the debug session by connecting with a controller
@@ -348,6 +346,7 @@ function start(controller_host, controller_port)
   if server then
     print("Connected to " .. controller_host .. ":" .. controller_port)
     debug.sethook(debug_hook, "lcr")
+    coro_debugger = coroutine.create(debugger_loop)
     return coroutine.resume(coro_debugger, server)
   end
 end
@@ -357,12 +356,13 @@ end
 remdebug.engine.start("192.168.1.111", 8171)
 
 print("Start")
+local foo
 for i = 1, 3 do
   local function bar()
     print("In bar")
   end
   print("Loop")
+  foo = i
   bar()
 end
 print("End")
-
