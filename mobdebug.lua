@@ -194,7 +194,7 @@ local function merge_paths(path1, path2)
   local paths2 = break_dir(path2)
   for i, path in ipairs(paths2) do
     if path == ".." then
-      table.remove(paths1, table.getn(paths1))
+      table.remove(paths1, #paths1)
     elseif path ~= "." then
       table.insert(paths1, path)
     end
@@ -214,13 +214,14 @@ local function debug_hook(event, line)
     end
     file = merge_paths(".", file) -- lfs.currentdir()
     local vars = capture_vars()
-    table.foreach(watches, function (index, value)
+    for index, value in pairs(watches) do
       setfenv(value, vars)
       local status, res = pcall(value)
       if status and res then
         coroutine.resume(coro_debugger, events.WATCH, vars, file, line, index)
+        restore_vars(vars)
       end
-    end)
+    end
     if step_into or (step_over and stack_level <= step_level) or has_breakpoint(file, line) then
       step_into = false
       step_over = false
@@ -233,6 +234,7 @@ end
 local function debugger_loop(server)
   local command
   local eval_env = {}
+  local function emptyWatch () return false end
   
   while true do
     local line = server:receive()
@@ -277,18 +279,21 @@ local function debugger_loop(server)
       local _, _, exp = string.find(line, "^[A-Z]+%s+(.+)$")
       if exp then 
         local func = loadstring("return(" .. exp .. ")")
-        local newidx = table.getn(watches) + 1
-        watches[newidx] = func
-        table.setn(watches, newidx)
-        server:send("200 OK " .. newidx .. "\n") 
+        if func then
+          local newidx = #watches + 1
+          watches[newidx] = func
+          server:send("200 OK " .. newidx .. "\n") 
+        else
+          server:send("400 Bad Request\n")
+        end
       else
         server:send("400 Bad Request\n")
       end
     elseif command == "DELW" then
       local _, _, index = string.find(line, "^[A-Z]+%s+(%d+)$")
       index = tonumber(index)
-      if index then
-        watches[index] = nil
+      if index and watches[index] then
+        watches[index] = emptyWatch
         server:send("200 OK\n") 
       else
         server:send("400 Bad Request\n")
@@ -450,7 +455,7 @@ function handle(line)
     if index then
       client:send("DELW " .. index .. "\n")
       if client:receive() == "200 OK" then 
-      watches[index] = nil
+        watches[index] = nil
       else
         print("Error: watch expression not removed")
       end
