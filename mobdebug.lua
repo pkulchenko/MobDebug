@@ -13,7 +13,7 @@ _DESCRIPTION = "Mobile Remote Debugger for the Lua programming language"
 _VERSION = "0.1"
 
 -- this is a socket class that implements socket.lua interface for remDebug
-local socketLua = (function () 
+local function socketLua() 
   local self = {}
   self.connect = function(host, port)
     local socket = require "socket"
@@ -35,10 +35,10 @@ local socketLua = (function ()
   end
 
   return self
-end)
+end
 
 -- this is a socket class that implements maConnect interface for remDebug
-local socketMobileLua = (function () 
+local function socketMobileLua() 
   local self = {}
   self.connect = function(host, port)
     local connection = maConnect("socket://" .. host .. ":" .. port)
@@ -99,7 +99,7 @@ local socketMobileLua = (function ()
   end
 
   return self
-end)
+end
 
 local socket = maConnect and socketMobileLua() or socketLua()
 
@@ -341,10 +341,7 @@ local function debugger_loop(server)
   end
 end
 
---
--- mobdebug.start()
 -- Tries to start the debug session by connecting with a controller
---
 function start(controller_host, controller_port)
   local server = socket.connect(controller_host, controller_port)
   if server then
@@ -355,40 +352,11 @@ function start(controller_host, controller_port)
   end
 end
 
-function server(host, port)
-
-local socket = require"socket"
-
-print("Lua Remote Debugger")
-print("Run the program you wish to debug")
-
-local server = socket.bind(host, port)
-local client = server:accept()
-
-local breakpoints = {}
-local watches = {}
-
-client:send("STEP\n")
-client:receive()
-
-local breakpoint = client:receive()
-local _, _, file, line = string.find(breakpoint, "^202 Paused%s+([%w%p]+)%s+(%d+)$")
-if file and line then
-  print("Paused at file " .. file )
-  print("Type 'help' for commands")
-else
-  local _, _, size = string.find(breakpoint, "^401 Error in Execution (%d+)$")
-  if size then
-    print("Error in remote application: ")
-    print(client:receive(size))
-  end
-end
-
+local client
 local basedir = ""
 
-while true do
-  io.write("> ")
-  local line = io.read("*line")
+-- Handles server debugging commands 
+function handle(line)
   local _, _, command = string.find(line, "^([a-z]+)")
   if command == "run" or command == "step" or command == "over" then
     client:send(string.upper(command) .. "\n")
@@ -585,7 +553,38 @@ while true do
   end
 end
 
+-- Starts debugging server
+function server(host, port)
+
+  local socket = require "socket"
+
+  print("Lua Remote Debugger")
+  print("Run the program you wish to debug")
+
+  local server = socket.bind(host, port)
+  client = server:accept()
+
+  client:send("STEP\n")
+  client:receive()
+
+  local breakpoint = client:receive()
+  local _, _, file, line = string.find(breakpoint, "^202 Paused%s+([%w%p]+)%s+(%d+)$")
+  if file and line then
+    print("Paused at file " .. file )
+    print("Type 'help' for commands")
+  else
+    local _, _, size = string.find(breakpoint, "^401 Error in Execution (%d+)$")
+    if size then
+      print("Error in remote application: ")
+      print(client:receive(size))
+    end
+  end
+
+  while true do
+    io.write("> ")
+    local line = io.read("*line")
+    handle(line)
+  end
 end
 
 end)()
-
