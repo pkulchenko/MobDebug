@@ -1,24 +1,13 @@
-require"remdebug.engine"
+require "mobdebug"
 
-remdebug.engine.start()
-    
-local tab = {
-  foo = 1,
-  bar = 2
-}
+mobdebug.start("192.168.1.111", 8171)
 
 print("Start")
-
-function bar()
-  print("In bar 1")
-  print("In bar 2")
-end
-
 for i = 1, 3 do
+  local function bar()
+    print("In bar")
+  end
   print("Loop")
   bar()
-  tab.foo = tab.foo * 2
 end
-
 print("End")
-
