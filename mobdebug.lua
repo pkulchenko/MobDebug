@@ -23,8 +23,8 @@ local function socketLua()
       self.send = function(self, msg) 
         return connection:send(msg) 
       end
-      self.receive = function(self) 
-        local line, status = connection:receive() 
+      self.receive = function(self, len) 
+        local line, status = connection:receive(len) 
         return line
       end
       self.close = function(self) 
@@ -68,9 +68,10 @@ local function socketMobileLua()
         local numberOfBytes = stringToBuffer(msg, outBuffer)
         maConnWrite(connection, outBuffer, numberOfBytes)
       end
-      self.receive = function(self) 
+      self.receive = function(self, len) 
         local line = ""
-        while not line:find("\n") do
+        while (len and string.len(line) < len)     -- either we need len bytes
+           or (not len and not line:find("\n")) do -- or one line (if no len specified)
           maConnRead(connection, inBuffer, 1000)
           while true do
             maWait(0)
@@ -113,10 +114,15 @@ local coro_debugger
 local events = { BREAK = 1, WATCH = 2 }
 local breakpoints = {}
 local watches = {}
+local abort = false
 local step_into = false
 local step_over = false
 local step_level = 0
 local stack_level = 0
+local server
+local debugee = function () 
+  local a = 1
+end
 
 local function set_breakpoint(file, line)
   if not breakpoints[file] then
@@ -203,6 +209,7 @@ local function merge_paths(path1, path2)
 end
 
 local function debug_hook(event, line)
+  if abort then error("aborted") end -- abort execution for RE/LOAD
   if event == "call" then
     stack_level = stack_level + 1
   elseif event == "return" then
@@ -231,11 +238,11 @@ local function debug_hook(event, line)
   end
 end
 
-local function debugger_loop(server)
+local function debugger_loop()
   local command
   local eval_env = {}
   local function emptyWatch () return false end
-  
+
   while true do
     local line = server:receive()
     command = string.sub(line, string.find(line, "^[A-Z]+"))
@@ -268,6 +275,23 @@ local function debugger_loop(server)
         if status then
           server:send("200 OK " .. string.len(res) .. "\n") 
           server:send(res)
+        else
+          server:send("401 Error in Expression " .. string.len(res) .. "\n")
+          server:send(res)
+        end
+      else
+        server:send("400 Bad Request\n")
+      end
+    elseif command == "LOAD" then
+      local _, _, size = string.find(line, "^[A-Z]+%s+(%d+)$")
+      local chunk = server:receive(0+size)
+      if chunk then 
+        local func, res = loadstring(chunk)
+        if func then
+          server:send("200 OK 0\n") 
+          debugee = func
+          abort = true
+          coroutine.yield()
         else
           server:send("401 Error in Expression " .. string.len(res) .. "\n")
           server:send(res)
@@ -348,12 +372,31 @@ end
 
 -- Tries to start the debug session by connecting with a controller
 function start(controller_host, controller_port)
-  local server = socket.connect(controller_host, controller_port)
+  server = socket.connect(controller_host, controller_port)
   if server then
     print("Connected to " .. controller_host .. ":" .. controller_port)
     debug.sethook(debug_hook, "lcr")
     coro_debugger = coroutine.create(debugger_loop)
-    return coroutine.resume(coro_debugger, server)
+    return coroutine.resume(coro_debugger)
+  end
+end
+
+function loop(controller_host, controller_port)
+  server = socket.connect(controller_host, controller_port)
+  if server then
+    print("Connected to " .. controller_host .. ":" .. controller_port)
+
+    while true do 
+      step_into = true
+      abort = false
+      coro_debugger = coroutine.create(debugger_loop)
+
+      local coro_debugee = coroutine.create(debugee)
+      debug.sethook(coro_debugee, debug_hook, "lcr")
+      coroutine.resume(coro_debugee)
+
+      if not abort then break end
+    end
   end
 end
 
@@ -471,37 +514,29 @@ function handle(line)
         print("Error: watch expression at index " .. index .. " [" .. exp .. "] not removed")
       end
     end    
-  elseif command == "eval" then
+  elseif command == "eval" or command == "exec" or command == "load" then
     local _, _, exp = string.find(line, "^[a-z]+%s+(.+)$")
     if exp then 
-      client:send("EXEC return (" .. exp .. ")\n")
-      local line = client:receive()
-      local _, _, status, len = string.find(line, "^(%d+)[a-zA-Z ]+(%d+)$")
-      if status == "200" then
-        len = tonumber(len)
-        local res = client:receive(len)
-        print(res)
-      elseif status == "401" then
-        len = tonumber(len)
-        local res = client:receive(len)
-        print("Error in expression:")
-        print(res)
+      if command == "eval" then
+        client:send("EXEC return (" .. exp .. ")\n")
+      elseif command == "exec" then
+        client:send("EXEC " .. exp .. "\n")
       else
-        print("Unknown error")
+        local file = io.open(exp, "r")
+        if not file then print("Cannot open file " .. exp); return end
+        local lines = file:read("*all")
+        file:close()
+        client:send("LOAD " .. string.len(lines) .. "\n")
+        client:send(lines)
       end
-    else
-      print("Invalid command")
-    end
-  elseif command == "exec" then
-    local _, _, exp = string.find(line, "^[a-z]+%s+(.+)$")
-    if exp then 
-      client:send("EXEC " .. exp .. "\n")
       local line = client:receive()
       local _, _, status, len = string.find(line, "^(%d+)[%s%w]+(%d+)$")
       if status == "200" then
         len = tonumber(len)
-        local res = client:receive(len)
-        print(res)
+        if len > 0 then 
+          local res = client:receive(len)
+          print(res)
+        end
       elseif status == "401" then
         len = tonumber(len)
         local res = client:receive(len)
@@ -559,7 +594,7 @@ function handle(line)
 end
 
 -- Starts debugging server
-function server(host, port)
+function listen(host, port)
 
   local socket = require "socket"
 

@@ -1,3 +1,3 @@
 require "mobdebug"
 
-mobdebug.server("*", 8171);
+mobdebug.listen("*", 8171);
