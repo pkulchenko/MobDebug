@@ -1,5 +1,5 @@
 --
--- MobDebug 0.1 Beta
+-- MobDebug 0.2
 -- Copyright Paul Kulchenko 2011
 -- Based on RemDebug 1.0 (http://www.keplerproject.org/remdebug)
 --
@@ -10,7 +10,7 @@ module("mobdebug", package.seeall)
 
 _COPYRIGHT = "Paul Kulchenko"
 _DESCRIPTION = "Mobile Remote Debugger for the Lua programming language"
-_VERSION = "0.1"
+_VERSION = "0.2"
 
 -- this is a socket class that implements socket.lua interface for remDebug
 local function socketLua() 
@@ -122,6 +122,8 @@ local stack_level = 0
 local server
 local debugee = function () 
   local a = 1
+  print("Dummy script for debugging")
+  return "ok"
 end
 
 local function set_breakpoint(file, line)
@@ -284,14 +286,21 @@ local function debugger_loop()
       end
     elseif command == "LOAD" then
       local _, _, size = string.find(line, "^[A-Z]+%s+(%d+)$")
-      local chunk = server:receive(0+size)
-      if chunk then 
+      size = 0+size
+      if size == 0 then -- RELOAD the current script being debugged
+        server:send("200 OK 0\n") 
+        abort = true
+        coroutine.yield() -- this should not return as the hook will abort
+      end 
+
+      local chunk = server:receive(size)
+      if chunk then -- LOAD a new script for debugging
         local func, res = loadstring(chunk)
         if func then
           server:send("200 OK 0\n") 
           debugee = func
           abort = true
-          coroutine.yield()
+          coroutine.yield() -- this should not return as the hook will abort
         else
           server:send("401 Error in Expression " .. string.len(res) .. "\n")
           server:send(res)
@@ -514,13 +523,16 @@ function handle(line)
         print("Error: watch expression at index " .. index .. " [" .. exp .. "] not removed")
       end
     end    
-  elseif command == "eval" or command == "exec" or command == "load" then
+  elseif command == "eval" or command == "exec" 
+      or command == "load" or command == "reload" then
     local _, _, exp = string.find(line, "^[a-z]+%s+(.+)$")
-    if exp then 
+    if exp or (command == "reload") then 
       if command == "eval" then
         client:send("EXEC return (" .. exp .. ")\n")
       elseif command == "exec" then
         client:send("EXEC " .. exp .. "\n")
+      elseif command == "reload" then
+        client:send("LOAD 0\n")
       else
         local file = io.open(exp, "r")
         if not file then print("Cannot open file " .. exp); return end

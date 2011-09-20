@@ -1,0 +1,27 @@
+This is a mobile debugger for Lua based on RemDebug that supports debugging
+of mobileLua applications based on MoSync.
+
+A server can be started with (also in server.lua):
+
+  require "mobdebug"
+  mobdebug.listen("*", 8171);
+
+A client to debug a particular script can be started with (start.lua):
+
+  require "mobdebug"
+  mobdebug.start("192.168.1.111", 8171)
+  print("Start")
+  local foo = 0
+  for i = 1, 3 do
+    foo = i
+    print("Loop")
+  end
+  print("End")
+
+A client to debug an arbitrary script can be started with (loop.lua):
+
+  require "mobdebug"
+  mobdebug.loop("192.168.1.111", 8171)
+
+The server can then execute "load load.lua" command, which will load
+'load.lua' script for debugging.
