@@ -12,7 +12,7 @@ _COPYRIGHT = "Paul Kulchenko"
 _DESCRIPTION = "Mobile Remote Debugger for the Lua programming language"
 _VERSION = "0.2"
 
--- this is a socket class that implements socket.lua interface for remDebug
+-- this is a socket class that implements socket.lua interface
 local function socketLua() 
   local self = {}
   self.connect = function(host, port)
@@ -37,7 +37,7 @@ local function socketLua()
   return self
 end
 
--- this is a socket class that implements maConnect interface for remDebug
+-- this is a socket class that implements maConnect interface
 local function socketMobileLua() 
   local self = {}
   self.connect = function(host, port)
@@ -595,6 +595,8 @@ function handle(line)
     print("listw                 -- lists watch expressions")
     print("eval <exp>            -- evaluates expression on the current context and returns its value")
     print("exec <stmt>           -- executes statement on the current context")
+    print("load <file>           -- loads a local file for debugging")
+    print("reload                -- restarts the current debugging session")
     print("basedir [<path>]      -- sets the base path of the remote application, or shows the current one")
     print("exit                  -- exits debugger")
   else
