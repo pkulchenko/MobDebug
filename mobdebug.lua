@@ -44,8 +44,8 @@ local function socketMobileLua()
     local connection = maConnect("socket://" .. host .. ":" .. port)
     return connection and (function ()
       local self = {}
-      local outBuffer = SysBufferCreate(1000)
-      local inBuffer = SysBufferCreate(1000)
+      local outBuffer = SysAlloc(1000)
+      local inBuffer = SysAlloc(1000)
       local event = SysEventCreate()
       function stringToBuffer(s, buffer)
         local i = 0
@@ -90,8 +90,8 @@ local function socketMobileLua()
         return line
       end
       self.close = function(self) 
-        SysBufferDelete(inBuffer)
-        SysBufferDelete(outBuffer)
+        SysFree(inBuffer)
+        SysFree(outBuffer)
         SysFree(event)
         maConnClose(connection)
       end
@@ -377,6 +377,10 @@ local function debugger_loop()
       server:send("400 Bad Request\n")
     end
   end
+end
+
+function connect(controller_host, controller_port)
+  return socket.connect(controller_host, controller_port)
 end
 
 -- Tries to start the debug session by connecting with a controller

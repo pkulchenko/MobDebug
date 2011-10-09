@@ -71,6 +71,7 @@ coro_debugger = coroutine.create(debugger_loop)
 while true do 
   step_into = true
   abort = false
+  print("Starting a new debugging session")
   local coro_debugee = coroutine.create(load)
   debug.sethook(coro_debugee, debug_hook, "lcr")
   coroutine.resume(coro_debugee)
