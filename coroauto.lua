@@ -31,17 +31,17 @@ local function test()
   print("End")
 end
 
-local function test1()
+local test1 = [[
   print("Start 1")
   for i = 1, 3 do
     print("Loop " .. i)
   end
   print("End 1")
-end
+]]
 
 local commands = {'step', 'step', 'reload', 'step', 'load', 'step', 'run'}
 
-local function debugger_loop(server)
+local function debugger_loop()
   while #commands do
     local line = table.remove(commands, 1)
     local command = string.sub(line, string.find(line, "^[a-z]+"))
@@ -55,7 +55,7 @@ print("Executing '" .. command .. "'")
       abort = true
       coroutine.yield()
     elseif command == "load" then
-      load = test1
+      load = loadstring(test1)
       abort = true
       coroutine.yield()
     else
@@ -68,13 +68,17 @@ load = test
 
 coro_debugger = coroutine.create(debugger_loop)
 
+local n = 0
 while true do 
+  n = n + 1
   step_into = true
   abort = false
   print("Starting a new debugging session")
   local coro_debugee = coroutine.create(load)
   debug.sethook(coro_debugee, debug_hook, "lcr")
   coroutine.resume(coro_debugee)
-  print("Done " .. coroutine.status(coro_debugee))
+  print("Done " .. n .. " " .. coroutine.status(coro_debugee))
   if not abort then break end
 end
+
+print "Done all"
