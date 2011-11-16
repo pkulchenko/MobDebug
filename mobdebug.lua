@@ -433,6 +433,7 @@ local basedir = ""
 -- Handles server debugging commands 
 function handle(line, client)
   local _, _, command = string.find(line, "^([a-z]+)")
+  local file, line, watch_idx
   if command == "run" or command == "step" or command == "over" then
     client:send(string.upper(command) .. "\n")
     client:receive()
@@ -443,12 +444,12 @@ function handle(line, client)
     end
     local _, _, status = string.find(breakpoint, "^(%d+)")
     if status == "202" then
-      local _, _, file, line = string.find(breakpoint, "^202 Paused%s+([%w%p]+)%s+(%d+)%s*$")
+      _, _, file, line = string.find(breakpoint, "^202 Paused%s+([%w%p]+)%s+(%d+)%s*$")
       if file and line then 
         print("Paused at file " .. file .. " line " .. line)
       end
     elseif status == "203" then
-      local _, _, file, line, watch_idx = string.find(breakpoint, "^203 Paused%s+([%w%p]+)%s+(%d+)%s+(%d+)%s*$")
+      _, _, file, line, watch_idx = string.find(breakpoint, "^203 Paused%s+([%w%p]+)%s+(%d+)%s+(%d+)%s*$")
       if file and line and watch_idx then
         print("Paused at file " .. file .. " line " .. line .. " (watch expression " .. watch_idx .. ": [" .. watches[watch_idx] .. "])")
       end
@@ -467,7 +468,7 @@ function handle(line, client)
     client:close()
     os.exit()
   elseif command == "setb" then
-    local _, _, _, filename, line = string.find(line, "^([a-z]+)%s+([%w%p]+)%s+(%d+)%s*$")
+    _, _, _, filename, line = string.find(line, "^([a-z]+)%s+([%w%p]+)%s+(%d+)%s*$")
     if filename and line then
       filename = basedir .. filename
       if not breakpoints[filename] then breakpoints[filename] = {} end
@@ -496,7 +497,7 @@ function handle(line, client)
       print("Invalid command")
     end
   elseif command == "delb" then
-    local _, _, _, filename, line = string.find(line, "^([a-z]+)%s+([%w%p]+)%s+(%d+)%s*$")
+    _, _, _, filename, line = string.find(line, "^([a-z]+)%s+([%w%p]+)%s+(%d+)%s*$")
     if filename and line then
       filename = basedir .. filename
       if not breakpoints[filename] then breakpoints[filename] = {} end
@@ -623,6 +624,7 @@ function handle(line, client)
       print("Invalid command")
     end
   end
+  return file, line
 end
 
 -- Starts debugging server
