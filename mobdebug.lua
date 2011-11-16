@@ -428,11 +428,10 @@ function loop(controller_host, controller_port)
   end
 end
 
-local client
 local basedir = ""
 
 -- Handles server debugging commands 
-function handle(line)
+function handle(line, client)
   local _, _, command = string.find(line, "^([a-z]+)")
   if command == "run" or command == "step" or command == "over" then
     client:send(string.upper(command) .. "\n")
@@ -635,7 +634,7 @@ function listen(host, port)
   print("Run the program you wish to debug")
 
   local server = socket.bind(host, port)
-  client = server:accept()
+  local client = server:accept()
 
   client:send("STEP\n")
   client:receive()
@@ -656,7 +655,7 @@ function listen(host, port)
   while true do
     io.write("> ")
     local line = io.read("*line")
-    handle(line)
+    handle(line, client)
   end
 end
 
