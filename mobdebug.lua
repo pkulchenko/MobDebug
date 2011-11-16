@@ -67,6 +67,19 @@ local function socketMobileLua()
       self.send = function(self, msg) 
         local numberOfBytes = stringToBuffer(msg, outBuffer)
         maConnWrite(connection, outBuffer, numberOfBytes)
+        local result = 0
+        while true do
+          maWait(0)
+          maGetEvent(event)
+          local eventType = SysEventGetType(event)
+          if (EVENT_TYPE_CLOSE == eventType) then maExit(0) end
+          if (EVENT_TYPE_CONN == eventType and
+              SysEventGetConnHandle(event) == connection and
+              SysEventGetConnOpType(event) == CONNOP_WRITE) then
+            result = result + SysEventGetConnResult(event);
+            if result == numberOfBytes then break end
+          end
+        end  
       end
       self.receive = function(self, len) 
         local line = ""
