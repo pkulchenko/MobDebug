@@ -387,6 +387,9 @@ local function debugger_loop()
         server:send("401 Error in Execution " .. string.len(file) .. "\n")
         server:send(file)
       end
+    elseif command == "EXIT" then
+      server:send("200 OK\n")
+      os.exit()
     else
       server:send("400 Bad Request\n")
     end
@@ -434,7 +437,8 @@ local basedir = ""
 function handle(line, client)
   local _, _, command = string.find(line, "^([a-z]+)")
   local file, line, watch_idx
-  if command == "run" or command == "step" or command == "over" then
+  if command == "run" or command == "step" 
+  or command == "over" or command == "exit" then
     client:send(string.upper(command) .. "\n")
     client:receive()
     local breakpoint = client:receive()
@@ -467,10 +471,6 @@ function handle(line, client)
       os.exit()
       return -- use return here for those cases where os.exit() is not wanted
     end
-  elseif command == "exit" then
-    client:close()
-    os.exit()
-    return -- use return here for those cases where os.exit() is not wanted
   elseif command == "setb" then
     _, _, _, filename, line = string.find(line, "^([a-z]+)%s+([%w%p]+)%s+(%d+)%s*$")
     if filename and line then
