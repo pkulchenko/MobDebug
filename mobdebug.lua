@@ -441,6 +441,7 @@ function handle(line, client)
     if not breakpoint then
       print("Program finished")
       os.exit()
+      return -- use return here for those cases where os.exit() is not wanted
     end
     local _, _, status = string.find(breakpoint, "^(%d+)")
     if status == "202" then
@@ -459,14 +460,17 @@ function handle(line, client)
         print("Error in remote application: ")
         print(client:receive(tonumber(size)))
         os.exit()
+        return -- use return here for those cases where os.exit() is not wanted
       end
     else
       print("Unknown error")
       os.exit()
+      return -- use return here for those cases where os.exit() is not wanted
     end
   elseif command == "exit" then
     client:close()
     os.exit()
+    return -- use return here for those cases where os.exit() is not wanted
   elseif command == "setb" then
     _, _, _, filename, line = string.find(line, "^([a-z]+)%s+([%w%p]+)%s+(%d+)%s*$")
     if filename and line then
