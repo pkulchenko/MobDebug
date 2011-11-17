@@ -434,8 +434,8 @@ end
 local basedir = ""
 
 -- Handles server debugging commands 
-function handle(line, client)
-  local _, _, command = string.find(line, "^([a-z]+)")
+function handle(params, client)
+  local _, _, command = string.find(params, "^([a-z]+)")
   local file, line, watch_idx
   if command == "run" or command == "step" 
   or command == "over" or command == "exit" then
@@ -472,7 +472,7 @@ function handle(line, client)
       return -- use return here for those cases where os.exit() is not wanted
     end
   elseif command == "setb" then
-    _, _, _, filename, line = string.find(line, "^([a-z]+)%s+([%w%p]+)%s+(%d+)%s*$")
+    _, _, _, filename, line = string.find(params, "^([a-z]+)%s+([%w%p]+)%s+(%d+)%s*$")
     if filename and line then
       filename = basedir .. filename
       if not breakpoints[filename] then breakpoints[filename] = {} end
@@ -486,7 +486,7 @@ function handle(line, client)
       print("Invalid command")
     end
   elseif command == "setw" then
-    local _, _, exp = string.find(line, "^[a-z]+%s+(.+)$")
+    local _, _, exp = string.find(params, "^[a-z]+%s+(.+)$")
     if exp then
       client:send("SETW " .. exp .. "\n")
       local answer = client:receive()
@@ -501,7 +501,7 @@ function handle(line, client)
       print("Invalid command")
     end
   elseif command == "delb" then
-    _, _, _, filename, line = string.find(line, "^([a-z]+)%s+([%w%p]+)%s+(%d+)%s*$")
+    _, _, _, filename, line = string.find(params, "^([a-z]+)%s+([%w%p]+)%s+(%d+)%s*$")
     if filename and line then
       filename = basedir .. filename
       if not breakpoints[filename] then breakpoints[filename] = {} end
@@ -526,7 +526,7 @@ function handle(line, client)
       end
     end
   elseif command == "delw" then
-    local _, _, index = string.find(line, "^[a-z]+%s+(%d+)%s*$")
+    local _, _, index = string.find(params, "^[a-z]+%s+(%d+)%s*$")
     if index then
       client:send("DELW " .. index .. "\n")
       if client:receive() == "200 OK" then 
@@ -548,7 +548,7 @@ function handle(line, client)
     end    
   elseif command == "eval" or command == "exec" 
       or command == "load" or command == "reload" then
-    local _, _, exp = string.find(line, "^[a-z]+%s+(.+)$")
+    local _, _, exp = string.find(params, "^[a-z]+%s+(.+)$")
     if exp or (command == "reload") then 
       if command == "eval" then
         client:send("EXEC return (" .. exp .. ")\n")
@@ -571,12 +571,12 @@ function handle(line, client)
         if len > 0 then 
           local res = client:receive(len)
           print(res)
+          return res
         end
       elseif status == "401" then
         len = tonumber(len)
         local res = client:receive(len)
-        print("Error in expression:")
-        print(res)
+        print("Error in expression: " .. res)
       else
         print("Unknown error")
       end
@@ -596,7 +596,7 @@ function handle(line, client)
       print("Watch exp. " .. i .. ": " .. v)
     end    
   elseif command == "basedir" then
-    local _, _, dir = string.find(line, "^[a-z]+%s+(.+)$")
+    local _, _, dir = string.find(params, "^[a-z]+%s+(.+)$")
     if dir then
       if not string.find(dir, "/$") then dir = dir .. "/" end
       basedir = dir
