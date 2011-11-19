@@ -299,8 +299,8 @@ local function debugger_loop()
         server:send("400 Bad Request\n")
       end
     elseif command == "LOAD" then
-      local _, _, size = string.find(line, "^[A-Z]+%s+(%d+)%s*$")
-      size = 0+size
+      local _, _, size, name = string.find(line, "^[A-Z]+%s+(%d+)%s+(%S+)%s*$")
+      size = tonumber(size)
       if size == 0 then -- RELOAD the current script being debugged
         server:send("200 OK 0\n") 
         abort = true
@@ -309,7 +309,7 @@ local function debugger_loop()
 
       local chunk = server:receive(size)
       if chunk then -- LOAD a new script for debugging
-        local func, res = loadstring(chunk)
+        local func, res = loadstring(chunk, name)
         if func then
           server:send("200 OK 0\n") 
           debugee = func
@@ -338,7 +338,7 @@ local function debugger_loop()
       end
     elseif command == "DELW" then
       local _, _, index = string.find(line, "^[A-Z]+%s+(%d+)%s*$")
-      index = 0+index
+      index = tonumber(index)
       if index > 0 and index <= #watches then
         watches[index] = emptyWatch
         server:send("200 OK\n") 
@@ -348,7 +348,6 @@ local function debugger_loop()
     elseif command == "RUN" then
       server:send("200 OK\n")
       local ev, vars, file, line, idx_watch = coroutine.yield()
-      file = "(interpreter)"
       eval_env = vars
       if ev == events.BREAK then
         server:send("202 Paused " .. file .. " " .. line .. "\n")
@@ -362,7 +361,6 @@ local function debugger_loop()
       server:send("200 OK\n")
       step_into = true
       local ev, vars, file, line, idx_watch = coroutine.yield()
-      file = "(interpreter)"
       eval_env = vars
       if ev == events.BREAK then
         server:send("202 Paused " .. file .. " " .. line .. "\n")
@@ -377,7 +375,6 @@ local function debugger_loop()
       step_over = true
       step_level = stack_level
       local ev, vars, file, line, idx_watch = coroutine.yield()
-      file = "(interpreter)"
       eval_env = vars
       if ev == events.BREAK then
         server:send("202 Paused " .. file .. " " .. line .. "\n")
@@ -555,13 +552,13 @@ function handle(params, client)
       elseif command == "exec" then
         client:send("EXEC " .. exp .. "\n")
       elseif command == "reload" then
-        client:send("LOAD 0\n")
+        client:send("LOAD 0 -\n")
       else
         local file = io.open(exp, "r")
         if not file then print("Cannot open file " .. exp); return end
         local lines = file:read("*all")
         file:close()
-        client:send("LOAD " .. string.len(lines) .. "\n")
+        client:send("LOAD " .. string.len(lines) .. " " .. exp .. "\n")
         client:send(lines)
       end
       local line = client:receive()
