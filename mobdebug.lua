@@ -1,5 +1,5 @@
 --
--- MobDebug 0.2
+-- MobDebug 0.3
 -- Copyright Paul Kulchenko 2011
 -- Based on RemDebug 1.0 (http://www.keplerproject.org/remdebug)
 --
@@ -10,7 +10,7 @@ module("mobdebug", package.seeall)
 
 _COPYRIGHT = "Paul Kulchenko"
 _DESCRIPTION = "Mobile Remote Debugger for the Lua programming language"
-_VERSION = "0.2"
+_VERSION = "0.3"
 
 -- this is a socket class that implements socket.lua interface
 local function socketLua() 
@@ -202,28 +202,6 @@ local function capture_vars()
   return vars
 end
 
-local function break_dir(path) 
-  local paths = {}
-  path = string.gsub(path, "\\", "/")
-  for w in string.gfind(path, "[^\/]+") do
-    table.insert(paths, w)
-  end
-  return paths
-end
-
-local function merge_paths(path1, path2)
-  local paths1 = break_dir(path1)
-  local paths2 = break_dir(path2)
-  for i, path in ipairs(paths2) do
-    if path == ".." then
-      table.remove(paths1, #paths1)
-    elseif path ~= "." then
-      table.insert(paths1, path)
-    end
-  end
-  return table.concat(paths1, "/")
-end
-
 local function debug_hook(event, line)
   if abort then error("aborted") end -- abort execution for RE/LOAD
   if event == "call" then
@@ -235,7 +213,6 @@ local function debug_hook(event, line)
     if string.find(file, "@") == 1 then
       file = string.sub(file, 2)
     end
-    file = merge_paths(".", file) -- lfs.currentdir()
     local vars = capture_vars()
     for index, value in pairs(watches) do
       setfenv(value, vars)
