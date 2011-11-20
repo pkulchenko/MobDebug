@@ -12,31 +12,6 @@ _COPYRIGHT = "Paul Kulchenko"
 _DESCRIPTION = "Mobile Remote Debugger for the Lua programming language"
 _VERSION = "0.3"
 
--- this is a socket class that implements socket.lua interface
-local function socketLua() 
-  local self = {}
-  self.connect = function(host, port)
-    local socket = require "socket"
-    local connection = socket.connect(host, port)
-    return connection and (function ()
-      local self = {}
-      self.send = function(self, msg) 
-        return connection:send(msg) 
-      end
-      self.receive = function(self, len) 
-        local line, status = connection:receive(len) 
-        return line
-      end
-      self.close = function(self) 
-        return connection:close() 
-      end
-      return self
-    end)()
-  end
-
-  return self
-end
-
 -- this is a socket class that implements maConnect interface
 local function socketMobileLua() 
   local self = {}
@@ -115,7 +90,7 @@ local function socketMobileLua()
   return self
 end
 
-local socket = maConnect and socketMobileLua() or socketLua()
+local socket = maConnect and socketMobileLua() or (require "socket")
 
 --
 -- RemDebug 1.0 Beta
@@ -258,8 +233,8 @@ local function debugger_loop()
     elseif command == "EXEC" then
       local _, _, chunk = string.find(line, "^[A-Z]+%s+(.+)$")
       if chunk then 
-        local func = loadstring(chunk)
-        local status, res
+        local func, res = loadstring(chunk)
+        local status
         if func then
           setfenv(func, eval_env)
           status, res = xpcall(func, debug.traceback)
@@ -544,7 +519,7 @@ function handle(params, client)
         client:send(lines)
       end
       local line = client:receive()
-      local _, _, status, len = string.find(line, "^(%d+)[%s%w]+(%d+)%s*$")
+      local _, _, status, len = string.find(line, "^(%d+)[%s%w]+%s+(%d+)%s*$")
       if status == "200" then
         len = tonumber(len)
         if len > 0 then 
@@ -556,8 +531,10 @@ function handle(params, client)
         len = tonumber(len)
         local res = client:receive(len)
         print("Error in expression: " .. res)
+        return nil, res
       else
         print("Unknown error")
+        return nil, "Unknown error"
       end
     else
       print("Invalid command")
