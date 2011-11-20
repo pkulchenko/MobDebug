@@ -215,7 +215,7 @@ local function debugger_loop()
     local line = server:receive()
     command = string.sub(line, string.find(line, "^[A-Z]+"))
     if command == "SETB" then
-      local _, _, _, filename, line = string.find(line, "^([A-Z]+)%s+([%w%p]+)%s+(%d+)%s*$")
+      local _, _, _, filename, line = string.find(line, "^([A-Z]+)%s+([%w%p%s]+)%s+(%d+)%s*$")
       if filename and line then
         set_breakpoint(filename, tonumber(line))
         server:send("200 OK\n")
@@ -223,7 +223,7 @@ local function debugger_loop()
         server:send("400 Bad Request\n")
       end
     elseif command == "DELB" then
-      local _, _, _, filename, line = string.find(line, "^([A-Z]+)%s+([%w%p]+)%s+(%d+)%s*$")
+      local _, _, _, filename, line = string.find(line, "^([A-Z]+)%s+([%w%p%s]+)%s+(%d+)%s*$")
       if filename and line then
         remove_breakpoint(filename, tonumber(line))
         server:send("200 OK\n")
@@ -251,7 +251,7 @@ local function debugger_loop()
         server:send("400 Bad Request\n")
       end
     elseif command == "LOAD" then
-      local _, _, size, name = string.find(line, "^[A-Z]+%s+(%d+)%s+(%S+)%s*$")
+      local _, _, size, name = string.find(line, "^[A-Z]+%s+(%d+)%s+([%w%p%s]+)%s*$")
       size = tonumber(size)
       if size == 0 then -- RELOAD the current script being debugged
         server:send("200 OK 0\n") 
@@ -403,12 +403,12 @@ function handle(params, client)
     end
     local _, _, status = string.find(breakpoint, "^(%d+)")
     if status == "202" then
-      _, _, file, line = string.find(breakpoint, "^202 Paused%s+([%w%p]+)%s+(%d+)%s*$")
+      _, _, file, line = string.find(breakpoint, "^202 Paused%s+([%w%p%s]+)%s+(%d+)%s*$")
       if file and line then 
         print("Paused at file " .. file .. " line " .. line)
       end
     elseif status == "203" then
-      _, _, file, line, watch_idx = string.find(breakpoint, "^203 Paused%s+([%w%p]+)%s+(%d+)%s+(%d+)%s*$")
+      _, _, file, line, watch_idx = string.find(breakpoint, "^203 Paused%s+([%w%p%s]+)%s+(%d+)%s+(%d+)%s*$")
       if file and line and watch_idx then
         print("Paused at file " .. file .. " line " .. line .. " (watch expression " .. watch_idx .. ": [" .. watches[watch_idx] .. "])")
       end
@@ -426,7 +426,7 @@ function handle(params, client)
       return -- use return here for those cases where os.exit() is not wanted
     end
   elseif command == "setb" then
-    _, _, _, filename, line = string.find(params, "^([a-z]+)%s+([%w%p]+)%s+(%d+)%s*$")
+    _, _, _, filename, line = string.find(params, "^([a-z]+)%s+([%w%p%s]+)%s+(%d+)%s*$")
     if filename and line then
       filename = basedir .. filename
       if not breakpoints[filename] then breakpoints[filename] = {} end
@@ -455,7 +455,7 @@ function handle(params, client)
       print("Invalid command")
     end
   elseif command == "delb" then
-    _, _, _, filename, line = string.find(params, "^([a-z]+)%s+([%w%p]+)%s+(%d+)%s*$")
+    _, _, _, filename, line = string.find(params, "^([a-z]+)%s+([%w%p%s]+)%s+(%d+)%s*$")
     if filename and line then
       filename = basedir .. filename
       if not breakpoints[filename] then breakpoints[filename] = {} end
@@ -603,7 +603,7 @@ function listen(host, port)
   client:receive()
 
   local breakpoint = client:receive()
-  local _, _, file, line = string.find(breakpoint, "^202 Paused%s+([%w%p]+)%s+(%d+)%s*$")
+  local _, _, file, line = string.find(breakpoint, "^202 Paused%s+([%w%p%s]+)%s+(%d+)%s*$")
   if file and line then
     print("Paused at file " .. file )
     print("Type 'help' for commands")
