@@ -237,7 +237,7 @@ local function debugger_loop()
         local status
         if func then
           setfenv(func, eval_env)
-          status, res = xpcall(func, debug.traceback)
+          status, res = pcall(func)
         end
         res = tostring(res)
         if status then
