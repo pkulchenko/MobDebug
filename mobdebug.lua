@@ -347,10 +347,15 @@ local function debugger_loop()
         server:send("401 Error in Execution " .. string.len(file) .. "\n")
         server:send(file)
       end
-    elseif command == "OVER" then
+    elseif command == "OVER" or command == "OUT" then
       server:send("200 OK\n")
       step_over = true
-      step_level = stack_level
+      
+      -- OVER and OUT are very similar except for 
+      -- the stack level value at which to stop
+      if command == "OUT" then step_level = stack_level - 1
+      else step_level = stack_level end
+
       local ev, vars, file, line, idx_watch = coroutine.yield()
       eval_env = vars
       if ev == events.BREAK then
@@ -411,7 +416,7 @@ local basedir = ""
 function handle(params, client)
   local _, _, command = string.find(params, "^([a-z]+)")
   local file, line, watch_idx
-  if command == "run" or command == "step" 
+  if command == "run" or command == "step" or command == "out"
   or command == "over" or command == "exit" then
     client:send(string.upper(command) .. "\n")
     client:receive()
@@ -588,6 +593,7 @@ function handle(params, client)
     print("run                   -- run until next breakpoint")
     print("step                  -- run until next line, stepping into function calls")
     print("over                  -- run until next line, stepping over function calls")
+    print("out                   -- run until line after returning from current function")
     print("listb                 -- lists breakpoints")
     print("listw                 -- lists watch expressions")
     print("eval <exp>            -- evaluates expression on the current context and returns its value")
