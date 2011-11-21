@@ -583,7 +583,7 @@ function handle(params, client)
     print("basedir [<path>]      -- sets the base path of the remote application, or shows the current one")
     print("exit                  -- exits debugger")
   else
-    local _, _, spaces = string.find(line, "^(%s*)$")
+    local _, _, spaces = string.find(params, "^(%s*)$")
     if not spaces then
       print("Invalid command")
     end
