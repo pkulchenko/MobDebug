@@ -188,6 +188,9 @@ local function debug_hook(event, line)
     if string.find(file, "@") == 1 then
       file = string.sub(file, 2)
     end
+    if string.find(file, "./") == 1 or string.find(file, ".\\") == 1 then
+      file = string.sub(file, 3)
+    end
     local vars = capture_vars()
     for index, value in pairs(watches) do
       setfenv(value, vars)
