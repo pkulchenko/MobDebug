@@ -454,7 +454,7 @@ function handle(params, client)
   elseif command == "setb" then
     _, _, _, filename, line = string.find(params, "^([a-z]+)%s+([%w%p%s]+)%s+(%d+)%s*$")
     if filename and line then
-      filename = basedir .. filename
+      filename = string.gsub(filename, basedir, '') -- remove basedir
       if not breakpoints[filename] then breakpoints[filename] = {} end
       client:send("SETB " .. filename .. " " .. line .. "\n")
       if client:receive() == "200 OK" then 
@@ -483,7 +483,7 @@ function handle(params, client)
   elseif command == "delb" then
     _, _, _, filename, line = string.find(params, "^([a-z]+)%s+([%w%p%s]+)%s+(%d+)%s*$")
     if filename and line then
-      filename = basedir .. filename
+      filename = string.gsub(filename, basedir, '') -- remove basedir
       if not breakpoints[filename] then breakpoints[filename] = {} end
       client:send("DELB " .. filename .. " " .. line .. "\n")
       if client:receive() == "200 OK" then 
@@ -541,7 +541,9 @@ function handle(params, client)
         if not file then print("Cannot open file " .. exp); return end
         local lines = file:read("*all")
         file:close()
-        client:send("LOAD " .. string.len(lines) .. " " .. exp .. "\n")
+
+        local filename = string.gsub(exp, basedir, '') -- remove basedir
+        client:send("LOAD " .. string.len(lines) .. " " .. filename .. "\n")
         client:send(lines)
       end
       local line = client:receive()
