@@ -563,11 +563,11 @@ function handle(params, client)
     end
   elseif command == "listb" then
     for k, v in pairs(breakpoints) do
-      io.write(k .. ": ")
+      local b = k .. ": " -- get filename
       for k, v in pairs(v) do
-        io.write(k .. " ")
+        b = b .. k .. " " -- get line numbers
       end
-      io.write("\n")
+      print(b)
     end
   elseif command == "listw" then
     for i, v in pairs(watches) do
