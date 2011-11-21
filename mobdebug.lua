@@ -177,12 +177,6 @@ local function capture_vars()
   return vars
 end
 
-local function getstackdepth()
-  local n = 1
-  while debug.getinfo(n+1, "") ~= nil do n=n+1 end
-  return n
-end
-
 local function debug_hook(event, line)
   if abort then error("aborted") end -- abort execution for RE/LOAD
   if event == "call" then
@@ -203,7 +197,7 @@ local function debug_hook(event, line)
     if caller.what == 'main' and
        caller.linedefined == 0 and
        caller.lastlinedefined == 0 and
-       getstackdepth() > 3 then
+       debug.getinfo(3,"n") and debug.getinfo(3,"n").name == 'require' then
       return
     end
 
