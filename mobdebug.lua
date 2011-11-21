@@ -177,6 +177,12 @@ local function capture_vars()
   return vars
 end
 
+local function getstackdepth()
+  local n = 1
+  while debug.getinfo(n+1, "") ~= nil do n=n+1 end
+  return n
+end
+
 local function debug_hook(event, line)
   if abort then error("aborted") end -- abort execution for RE/LOAD
   if event == "call" then
@@ -184,7 +190,24 @@ local function debug_hook(event, line)
   elseif event == "return" then
     stack_level = stack_level - 1
   else
-    local file = debug.getinfo(2, "S").source
+    local caller = debug.getinfo(2, "S")
+
+    -- this is a hack that was put in place to protect
+    -- against stepping through require'ed code
+    -- which, upon return, for some reason aborts the application.
+    -- I couldn't find a workaround or a way to fix this. 
+    -- this is reproduced with having "require 'foo'" in your
+    -- code, stepping through it and then returning back.
+    -- the next statement executed after returning from "require"
+    -- is the last statement that gets executed
+    if caller.what == 'main' and
+       caller.linedefined == 0 and
+       caller.lastlinedefined == 0 and
+       getstackdepth() > 3 then
+      return
+    end
+
+    local file = caller.source
     if string.find(file, "@") == 1 then
       file = string.sub(file, 2)
     end
