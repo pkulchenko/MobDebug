@@ -1,5 +1,5 @@
 --
--- MobDebug 0.3
+-- MobDebug 0.35
 -- Copyright Paul Kulchenko 2011
 -- Based on RemDebug 1.0 (http://www.keplerproject.org/remdebug)
 --
@@ -10,7 +10,7 @@ module("mobdebug", package.seeall)
 
 _COPYRIGHT = "Paul Kulchenko"
 _DESCRIPTION = "Mobile Remote Debugger for the Lua programming language"
-_VERSION = "0.3"
+_VERSION = "0.35"
 
 -- this is a socket class that implements maConnect interface
 local function socketMobileLua() 
@@ -413,6 +413,14 @@ function loop(controller_host, controller_port)
   if server then
     print("Connected to " .. controller_host .. ":" .. controller_port)
 
+    local function err(trace, err)
+      local msg = err .. "\n" .. trace
+      server:send("401 Error in Execution " .. string.len(msg) .. "\n")
+      server:send(msg)
+      server:close()
+      return err
+    end
+
     while true do 
       step_into = true
       abort = false
@@ -420,12 +428,19 @@ function loop(controller_host, controller_port)
 
       local coro_debugee = coroutine.create(debugee)
       debug.sethook(coro_debugee, debug_hook, "lcr")
-      coroutine.resume(coro_debugee)
+      local status, error = coroutine.resume(coro_debugee)
 
-      if not abort then break end
+      -- was there an error or is the script done?
+      if not abort then -- this is an expected error; ignore it
+        if not status then -- this is something to be reported
+          return false,err(debug.traceback(coro_debugee), error) 
+        end
+        break
+      end
     end
     server:close()
   end
+  return true
 end
 
 local basedir = ""
@@ -458,15 +473,15 @@ function handle(params, client)
     elseif status == "401" then 
       local _, _, size = string.find(breakpoint, "^401 Error in Execution (%d+)$")
       if size then
-        print("Error in remote application: ")
-        print(client:receive(tonumber(size)))
+        local msg = client:receive(tonumber(size))
+        print("Error in remote application: " .. msg)
         os.exit()
-        return -- use return here for those cases where os.exit() is not wanted
+        return nil, nil, msg -- use return here for those cases where os.exit() is not wanted
       end
     else
       print("Unknown error")
       os.exit()
-      return -- use return here for those cases where os.exit() is not wanted
+      return nil, nil, "Unknown error" -- use return here for those cases where os.exit() is not wanted
     end
   elseif command == "setb" then
     _, _, _, filename, line = string.find(params, "^([a-z]+)%s+([%w%p%s]+)%s+(%d+)%s*$")
@@ -570,16 +585,16 @@ function handle(params, client)
         if len > 0 then 
           local res = client:receive(len)
           print(res)
-          return res
+          return filename, 1
         end
       elseif status == "401" then
         len = tonumber(len)
         local res = client:receive(len)
         print("Error in expression: " .. res)
-        return nil, res
+        return nil, nil, res
       else
         print("Unknown error")
-        return nil, "Unknown error"
+        return nil, nil, "Unknown error"
       end
     else
       print("Invalid command")
@@ -628,6 +643,7 @@ function handle(params, client)
     local _, _, spaces = string.find(params, "^(%s*)$")
     if not spaces then
       print("Invalid command")
+      return nil, nil, "Invalid command"
     end
   end
   return file, line
