@@ -224,13 +224,20 @@ local function debug_hook(event, line)
       return
     end
 
+    -- grab the filename and fix it if needed
     local file = caller.source
     if string.find(file, "@") == 1 then
       file = string.sub(file, 2)
     end
+    -- remove references to the current folder (./ or .\)
     if string.find(file, "./") == 1 or string.find(file, ".\\") == 1 then
       file = string.sub(file, 3)
     end
+    -- fix filenames for loaded strings that may contain scripts with newlines
+    if string.find(file, "\n") then
+      file = string.sub(string.gsub(file, "\n", ' '), 1, 32) -- limit to 32 chars
+    end
+
     local vars = capture_vars()
     for index, value in pairs(watches) do
       setfenv(value, vars)
