@@ -294,7 +294,7 @@ local function debugger_loop()
         server:send("400 Bad Request\n")
       end
     elseif command == "LOAD" then
-      local _, _, size, name = string.find(line, "^[A-Z]+%s+(%d+)%s+([%w%p%s]+)%s*$")
+      local _, _, size, name = string.find(line, "^[A-Z]+%s+(%d+)%s+([%w%p%s]+[%w%p]+)%s*$")
       size = tonumber(size)
       if size == 0 then -- RELOAD the current script being debugged
         server:send("200 OK 0\n") 
