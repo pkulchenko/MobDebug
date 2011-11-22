@@ -17,11 +17,27 @@ local function socketMobileLua()
   local self = {}
   self.connect = function(host, port)
     local connection = maConnect("socket://" .. host .. ":" .. port)
+
+    local event = SysEventCreate()
+    while true do
+      maWait(0)
+      maGetEvent(event)
+      local eventType = SysEventGetType(event)
+      if (EVENT_TYPE_CLOSE == eventType) then maExit(0) end
+      if (EVENT_TYPE_CONN == eventType and
+        SysEventGetConnHandle(event) == connection and
+        SysEventGetConnOpType(event) == CONNOP_CONNECT) then
+          break
+      end
+    end
+    SysFree(event)
+
     return connection and (function ()
       local self = {}
       local outBuffer = SysAlloc(1000)
       local inBuffer = SysAlloc(1000)
       local event = SysEventCreate()
+      local recvBuffer = ""
       function stringToBuffer(s, buffer)
         local i = 0
         for c in s:gmatch(".") do
@@ -51,13 +67,12 @@ local function socketMobileLua()
           if (EVENT_TYPE_CONN == eventType and
               SysEventGetConnHandle(event) == connection and
               SysEventGetConnOpType(event) == CONNOP_WRITE) then
-            result = result + SysEventGetConnResult(event);
-            if result == numberOfBytes then break end
+            break
           end
         end  
       end
       self.receive = function(self, len) 
-        local line = ""
+        local line = recvBuffer
         while (len and string.len(line) < len)     -- either we need len bytes
            or (not len and not line:find("\n")) do -- or one line (if no len specified)
           maConnRead(connection, inBuffer, 1000)
@@ -75,6 +90,14 @@ local function socketMobileLua()
             end
           end  
         end
+
+        if not len then
+          len = string.find(line, "\n") or string.len(line)
+        end
+
+        recvBuffer = string.sub(line, len+1)
+        line = string.sub(line, 1, len)
+
         return line
       end
       self.close = function(self) 
