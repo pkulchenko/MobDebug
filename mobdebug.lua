@@ -592,7 +592,7 @@ function handle(params, client)
         if len > 0 then 
           local res = client:receive(len)
           print(res)
-          return filename, 1
+          return res
         end
       elseif status == "401" then
         len = tonumber(len)
