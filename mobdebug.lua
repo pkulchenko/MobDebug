@@ -1,5 +1,5 @@
 --
--- MobDebug 0.35
+-- MobDebug 0.36
 -- Copyright Paul Kulchenko 2011
 -- Based on RemDebug 1.0 (http://www.keplerproject.org/remdebug)
 --
@@ -10,13 +10,14 @@ module("mobdebug", package.seeall)
 
 _COPYRIGHT = "Paul Kulchenko"
 _DESCRIPTION = "Mobile Remote Debugger for the Lua programming language"
-_VERSION = "0.35"
+_VERSION = "0.36"
 
 -- this is a socket class that implements maConnect interface
 local function socketMobileLua() 
   local self = {}
   self.connect = function(host, port)
     local connection = maConnect("socket://" .. host .. ":" .. port)
+    if not (connection > 0) then return end
 
     local event = SysEventCreate()
     while true do
@@ -27,6 +28,8 @@ local function socketMobileLua()
       if (EVENT_TYPE_CONN == eventType and
         SysEventGetConnHandle(event) == connection and
         SysEventGetConnOpType(event) == CONNOP_CONNECT) then
+          -- result > 0 ? success : error
+          if not (SysEventGetConnResult(event) > 0) then return end
           break
       end
     end
@@ -412,6 +415,8 @@ function start(controller_host, controller_port)
     debug.sethook(debug_hook, "lcr")
     coro_debugger = coroutine.create(debugger_loop)
     return coroutine.resume(coro_debugger)
+  else
+    print("Could not connect to " .. controller_host .. ":" .. controller_port)
   end
 end
 
@@ -420,7 +425,7 @@ function loop(controller_host, controller_port)
   if server then
     print("Connected to " .. controller_host .. ":" .. controller_port)
 
-    local function err(trace, err)
+    local function report(trace, err)
       local msg = err .. "\n" .. trace
       server:send("401 Error in Execution " .. string.len(msg) .. "\n")
       server:send(msg)
@@ -440,12 +445,15 @@ function loop(controller_host, controller_port)
       -- was there an error or is the script done?
       if not abort then -- this is an expected error; ignore it
         if not status then -- this is something to be reported
-          return false,err(debug.traceback(coro_debugee), error) 
+          return false,report(debug.traceback(coro_debugee), error) 
         end
         break
       end
     end
     server:close()
+  else
+    print("Could not connect to " .. controller_host .. ":" .. controller_port)
+    return false
   end
   return true
 end
