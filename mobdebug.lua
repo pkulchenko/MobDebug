@@ -212,21 +212,6 @@ local function debug_hook(event, line)
   elseif event == "line" then
     local caller = debug.getinfo(2, "S")
 
-    -- this is a hack that was put in place to protect
-    -- against stepping through require'ed code
-    -- which, upon return, for some reason aborts the application.
-    -- I couldn't find a workaround or a way to fix this. 
-    -- this is reproduced with having "require 'foo'" in your
-    -- code, stepping through it and then returning back.
-    -- the next statement executed after returning from "require"
-    -- is the last statement that gets executed
-    if caller.what == 'main' and
-       caller.linedefined == 0 and
-       caller.lastlinedefined == 0 and
-       debug.getinfo(3,"n") and debug.getinfo(3,"n").name == 'require' then
-      return
-    end
-
     -- grab the filename and fix it if needed
     local file = caller.source
     if string.find(file, "@") == 1 then
