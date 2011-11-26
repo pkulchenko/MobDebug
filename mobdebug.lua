@@ -1,5 +1,5 @@
 --
--- MobDebug 0.36
+-- MobDebug 0.39
 -- Copyright Paul Kulchenko 2011
 -- Based on RemDebug 1.0 (http://www.keplerproject.org/remdebug)
 --
@@ -10,108 +10,119 @@ module("mobdebug", package.seeall)
 
 _COPYRIGHT = "Paul Kulchenko"
 _DESCRIPTION = "Mobile Remote Debugger for the Lua programming language"
-_VERSION = "0.36"
+_VERSION = "0.39"
 
 -- this is a socket class that implements maConnect interface
 local function socketMobileLua() 
   local self = {}
-  self.connect = function(host, port)
-    local connection = maConnect("socket://" .. host .. ":" .. port)
-    if not (connection > 0) then return end
-
-    local event = SysEventCreate()
+  self.connect = coroutine.wrap(function(host, port)
     while true do
-      maWait(0)
-      maGetEvent(event)
-      local eventType = SysEventGetType(event)
-      if (EVENT_TYPE_CLOSE == eventType) then maExit(0) end
-      if (EVENT_TYPE_CONN == eventType and
-        SysEventGetConnHandle(event) == connection and
-        SysEventGetConnOpType(event) == CONNOP_CONNECT) then
-          -- result > 0 ? success : error
-          if not (SysEventGetConnResult(event) > 0) then return end
-          break
-      end
-    end
-    SysFree(event)
-
-    return connection and (function ()
-      local self = {}
-      local outBuffer = SysAlloc(1000)
-      local inBuffer = SysAlloc(1000)
-      local event = SysEventCreate()
-      local recvBuffer = ""
-      function stringToBuffer(s, buffer)
-        local i = 0
-        for c in s:gmatch(".") do
-          i = i + 1
-          local b = s:byte(i)
-          SysBufferSetByte(buffer, i - 1, b)
-        end
-        return i
-      end
-      function bufferToString(buffer, len)
-        local s = ""
-        for i = 0, len - 1 do
-          local c = SysBufferGetByte(buffer, i)
-          s = s .. string.char(c)
-        end
-        return s
-      end
-      self.send = function(self, msg) 
-        local numberOfBytes = stringToBuffer(msg, outBuffer)
-        maConnWrite(connection, outBuffer, numberOfBytes)
-        local result = 0
+      local connection = maConnect("socket://" .. host .. ":" .. port)
+  
+      if connection > 0 then
+        local event = SysEventCreate()
         while true do
           maWait(0)
           maGetEvent(event)
           local eventType = SysEventGetType(event)
           if (EVENT_TYPE_CLOSE == eventType) then maExit(0) end
           if (EVENT_TYPE_CONN == eventType and
-              SysEventGetConnHandle(event) == connection and
-              SysEventGetConnOpType(event) == CONNOP_WRITE) then
-            break
+            SysEventGetConnHandle(event) == connection and
+            SysEventGetConnOpType(event) == CONNOP_CONNECT) then
+              -- result > 0 ? success : error
+              if not (SysEventGetConnResult(event) > 0) then connection = nil end
+              break
           end
-        end  
-      end
-      self.receive = function(self, len) 
-        local line = recvBuffer
-        while (len and string.len(line) < len)     -- either we need len bytes
-           or (not len and not line:find("\n")) do -- or one line (if no len specified)
-          maConnRead(connection, inBuffer, 1000)
-          while true do
-            maWait(0)
-            maGetEvent(event)
-            local eventType = SysEventGetType(event)
-            if (EVENT_TYPE_CLOSE == eventType) then maExit(0) end
-            if (EVENT_TYPE_CONN == eventType and
-                SysEventGetConnHandle(event) == connection and
-                SysEventGetConnOpType(event) == CONNOP_READ) then
-              local result = SysEventGetConnResult(event);
-              if result > 0 then line = line .. bufferToString(inBuffer, result) end
-              break; -- got the event we wanted; now check if we have all we need
-            end
-          end  
         end
-
-        if not len then
-          len = string.find(line, "\n") or string.len(line)
-        end
-
-        recvBuffer = string.sub(line, len+1)
-        line = string.sub(line, 1, len)
-
-        return line
-      end
-      self.close = function(self) 
-        SysFree(inBuffer)
-        SysFree(outBuffer)
         SysFree(event)
-        maConnClose(connection)
       end
-      return self
-    end)()
-  end
+  
+      host, port = coroutine.yield(connection and (function ()
+        local self = {}
+        local outBuffer = SysAlloc(1000)
+        local inBuffer = SysAlloc(1000)
+        local event = SysEventCreate()
+        local recvBuffer = ""
+        function stringToBuffer(s, buffer)
+          local i = 0
+          for c in s:gmatch(".") do
+            i = i + 1
+            local b = s:byte(i)
+            SysBufferSetByte(buffer, i - 1, b)
+          end
+          return i
+        end
+        function bufferToString(buffer, len)
+          local s = ""
+          for i = 0, len - 1 do
+            local c = SysBufferGetByte(buffer, i)
+            s = s .. string.char(c)
+          end
+          return s
+        end
+        self.send = coroutine.wrap(function(self, msg) 
+          while true do
+            local numberOfBytes = stringToBuffer(msg, outBuffer)
+            maConnWrite(connection, outBuffer, numberOfBytes)
+            local result = 0
+            while true do
+              maWait(0)
+              maGetEvent(event)
+              local eventType = SysEventGetType(event)
+              if (EVENT_TYPE_CLOSE == eventType) then maExit(0) end
+              if (EVENT_TYPE_CONN == eventType and
+                  SysEventGetConnHandle(event) == connection and
+                  SysEventGetConnOpType(event) == CONNOP_WRITE) then
+                break
+              end
+            end
+            self, msg = coroutine.yield()
+          end
+        end)
+        self.receive = coroutine.wrap(function(self, len) 
+          while true do
+            local line = recvBuffer
+            while (len and string.len(line) < len)     -- either we need len bytes
+               or (not len and not line:find("\n")) do -- or one line (if no len specified)
+              maConnRead(connection, inBuffer, 1000)
+              while true do
+                maWait(0)
+                maGetEvent(event)
+                local eventType = SysEventGetType(event)
+                if (EVENT_TYPE_CLOSE == eventType) then maExit(0) end
+                if (EVENT_TYPE_CONN == eventType and
+                    SysEventGetConnHandle(event) == connection and
+                    SysEventGetConnOpType(event) == CONNOP_READ) then
+                  local result = SysEventGetConnResult(event);
+                  if result > 0 then line = line .. bufferToString(inBuffer, result) end
+                  break; -- got the event we wanted; now check if we have all we need
+                end
+              end  
+            end
+    
+            if not len then
+              len = string.find(line, "\n") or string.len(line)
+            end
+    
+            recvBuffer = string.sub(line, len+1)
+            line = string.sub(line, 1, len)
+    
+            self, len = coroutine.yield(line)
+          end
+        end)
+        self.close = coroutine.wrap(function(self) 
+          while true do
+            SysFree(inBuffer)
+            SysFree(outBuffer)
+            SysFree(event)
+            maConnClose(connection)
+            coroutine.yield(self)
+          end
+        end)
+        return self
+      end)())
+    end
+  end)
 
   return self
 end
