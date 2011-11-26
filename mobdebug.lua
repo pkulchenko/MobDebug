@@ -209,7 +209,7 @@ local function debug_hook(event, line)
     stack_level = stack_level + 1
   elseif event == "return" then
     stack_level = stack_level - 1
-  else
+  elseif event == "line" then
     local caller = debug.getinfo(2, "S")
 
     -- this is a hack that was put in place to protect
@@ -254,7 +254,6 @@ local function debug_hook(event, line)
       step_into = false
       step_over = false
       coroutine.resume(coro_debugger, events.BREAK, vars, file, line)
-      restore_vars(vars)
     end
   end
 end
