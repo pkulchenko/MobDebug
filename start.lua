@@ -1,6 +1,6 @@
 require "mobdebug"
 
-mobdebug.start("192.168.1.111", 8171)
+mobdebug.start("localhost", 8171)
 
 print("Start")
 local foo = 0
