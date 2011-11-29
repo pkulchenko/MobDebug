@@ -1,7 +1,3 @@
-require "mobdebug"
-
-mobdebug.start("localhost", 8171)
-
 local tab = {
   foo = 1,
   bar = 2
