@@ -1,9 +1,10 @@
 MobDebug is a remote debugger for Lua.
 
-It lets you control the execution of another Lua program remotely, 
+MobDebug lets you control the execution of another Lua program remotely, 
 setting breakpoints and inspecting the current state of the program. 
 
-MobDebug is based on RemDebug and extends it in several ways:
+MobDebug is based on RemDebug (http://www.keplerproject.org/remdebug/) and 
+extends it in several ways:
 
 1. fixed several existing bugs
 2. added new commands: LOAD, RELOAD, OUT
@@ -18,7 +19,7 @@ See examples/README and examples/*.lua for examples of how to use the module.
 
 DEPENDENCIES
 
-MobDebug depends on LuaSocket 2.0
+MobDebug depends on LuaSocket 2.0 and has been tested with Lua 5.1.
 
 AUTHOR
 
