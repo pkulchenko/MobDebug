@@ -1,27 +1,33 @@
-This is a mobile debugger for Lua based on RemDebug that supports debugging
-of mobileLua applications based on MoSync.
+MobDebug is a remote debugger for Lua.
 
-A server can be started with (server.lua):
+It lets you control the execution of another Lua program remotely, 
+setting breakpoints and inspecting the current state of the program. 
 
-  require "mobdebug"
-  mobdebug.listen("*", 8171);
+MobDebug is based on RemDebug and extends it in several ways:
 
-A client to debug a particular script can be started with (start.lua):
+1. fixed several existing bugs
+2. added new commands: LOAD, RELOAD, OUT
+3. added support for MoSync clients (http://mosync.com/)
+4. tested integration with Estrela editor (http://www.luxinia.de/index.php/Estrela/)
+5. removed dependency on LuaFileSystem
 
-  require "mobdebug"
-  mobdebug.start("localhost", 8171)
-  print("Start")
-  local foo = 0
-  for i = 1, 3 do
-    foo = i
-    print("Loop")
-  end
-  print("End")
+INSTALLATION
 
-A client to debug an arbitrary script can be started with (loop.lua):
+Make src/mobdebug.lua available to your script. 
+See examples/README and examples/*.lua for examples of how to use the module.
 
-  require "mobdebug"
-  mobdebug.loop("localhost", 8171)
+DEPENDENCIES
 
-The server can then execute "load load.lua" command, which will load
-'load.lua' script for debugging.
+MobDebug depends on LuaSocket 2.0
+
+AUTHOR
+
+Paul Kulchenko (paul@kulchenko.com)
+
+LICENSE
+
+See LICENSE file
+
+HISTORY 
+
+Dec 02 2011  v0.40  First public release.

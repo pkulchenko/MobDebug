@@ -1,0 +1,43 @@
+This directory contains some examples that show how MobDebug can be used.
+
+1. A server can be started with (server.lua):
+
+  require "mobdebug"
+  mobdebug.listen("*", 8171);
+
+2. A client to debug a particular script can be started with (start.lua):
+
+  require "mobdebug"
+  mobdebug.start("localhost", 8171)
+
+  print("Start")
+  local foo = 0
+  for i = 1, 3 do
+    foo = i
+    print("Loop")
+  end
+  print("End")
+
+3. A client to debug an arbitrary script can be started with (loop.lua):
+
+  require "mobdebug"
+  mobdebug.loop("localhost", 8171)
+
+The server can then execute "load load.lua" command, which will load
+'load.lua' script for debugging.
+
+4. A combination of autotest.lua and test.lua provides a simple way to
+run tests remotely. For example, you can start the server with:
+
+> lua autotest.lua
+
+and then start a client with:
+
+> lua loop.lua
+
+The server will detect that the client connected and will load test.lua
+and execute it remotely. It will run a set of commands and test values
+against expected results. This allows for testing some functionality
+on a remote platform (for example, a mobile device or a simulator) that
+a host platform doesn't have. The output syntax follows Test Anything
+Protocol (TAP) and can be integrated with existing test harnesses.

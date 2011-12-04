@@ -1,5 +1,5 @@
 --
--- MobDebug 0.39
+-- MobDebug 0.40
 -- Copyright Paul Kulchenko 2011
 -- Based on RemDebug 1.0 (http://www.keplerproject.org/remdebug)
 --
@@ -10,7 +10,7 @@ module("mobdebug", package.seeall)
 
 _COPYRIGHT = "Paul Kulchenko"
 _DESCRIPTION = "Mobile Remote Debugger for the Lua programming language"
-_VERSION = "0.39"
+_VERSION = "0.40"
 
 -- this is a socket class that implements maConnect interface
 local function socketMobileLua() 
