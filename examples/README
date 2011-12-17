@@ -26,7 +26,7 @@ This directory contains some examples that show how MobDebug can be used.
 The server can then execute "load load.lua" command, which will load
 'load.lua' script for debugging.
 
-4. A combination of autotest.lua and test.lua provides a simple way to
+4. A combination of autotest.lua and auto/test.lua provides a simple way to
 run tests remotely. For example, you can start the server with:
 
 > lua autotest.lua

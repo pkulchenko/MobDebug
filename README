@@ -31,4 +31,16 @@ See LICENSE file
 
 HISTORY 
 
-Dec 02 2011  v0.40  First public release.
+Dec 02 2011 v0.40
+  - First public release.
+
+Dec 17 2011 v0.41
+  - Added slash conversion in filenames to make breakpoints work regardless
+    of how slashes are specified in file names and in setb/delb commands.
+  - Added tests with breakpoints in files in subfolders.
+  - Added optimization for filename processing in the debug hook 
+    (Christoph Kubisch).
+  - Added conversion of newlines for EVAL/EXEC commands to make them work
+    with multiline expressions.
+  - Allowed 'setb' and 'delb' commands to accept '-' as the filename.
+    The last referenced (checked/stopped at/etc.) filename is used.
