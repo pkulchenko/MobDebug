@@ -1,5 +1,5 @@
 --
--- MobDebug 0.401
+-- MobDebug 0.402
 -- Copyright Paul Kulchenko 2011
 -- Based on RemDebug 1.0 (http://www.keplerproject.org/remdebug)
 --
@@ -10,7 +10,7 @@ module("mobdebug", package.seeall)
 
 _COPYRIGHT = "Paul Kulchenko"
 _DESCRIPTION = "Mobile Remote Debugger for the Lua programming language"
-_VERSION = "0.401"
+_VERSION = "0.402"
 
 -- this is a socket class that implements maConnect interface
 local function socketMobileLua() 
@@ -590,8 +590,10 @@ function handle(params, client)
     local _, _, exp = string.find(params, "^[a-z]+%s+(.+)$")
     if exp or (command == "reload") then 
       if command == "eval" then
+        exp = string.gsub(exp, "\n", " ") -- convert new lines
         client:send("EXEC return (" .. exp .. ")\n")
       elseif command == "exec" then
+        exp = string.gsub(exp, "\n", " ") -- convert new lines
         client:send("EXEC " .. exp .. "\n")
       elseif command == "reload" then
         client:send("LOAD 0 -\n")
