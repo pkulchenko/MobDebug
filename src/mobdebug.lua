@@ -1,5 +1,5 @@
 --
--- MobDebug 0.403
+-- MobDebug 0.404
 -- Copyright Paul Kulchenko 2011
 -- Based on RemDebug 1.0 (http://www.keplerproject.org/remdebug)
 --
@@ -10,7 +10,7 @@ module("mobdebug", package.seeall)
 
 _COPYRIGHT = "Paul Kulchenko"
 _DESCRIPTION = "Mobile Remote Debugger for the Lua programming language"
-_VERSION = "0.403"
+_VERSION = "0.404"
 
 -- this is a socket class that implements maConnect interface
 local function socketMobileLua() 
@@ -155,6 +155,7 @@ local debugee = function ()
 end
 
 local function set_breakpoint(file, line)
+  if file == '-' and lastfile then file = lastfile end
   if not breakpoints[file] then
     breakpoints[file] = {}
   end
@@ -162,6 +163,7 @@ local function set_breakpoint(file, line)
 end
 
 local function remove_breakpoint(file, line)
+  if file == '-' and lastfile then file = lastfile end
   if breakpoints[file] then
     breakpoints[file][line] = nil
   end

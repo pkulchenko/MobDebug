@@ -12,14 +12,16 @@ print("Run the program you wish to debug")
 local client = server:accept()
 
 local commands = {
-  'load test.lua', -- load Lua script and start debugger
-  'over', 'over', 'step', 'over', 'setb test.lua 15', 'run', 
+  'load auto/test.lua', -- load Lua script and start debugger
+  'over', 'over', 'step', 'over', 'setb - 15', 'run', 
   'reload', -- reload the same script; breakpoints/watches still stay
-  'run', {'eval tab.foo', 2, "this should fail"}, -- should display "not ok"
-         {'eval tab.bar', 2, "this should work"}, -- should display "ok"
+  'run',
+  {'eval tab.foo', 2, "this should fail"}, -- should display "not ok"
+  {'eval tab.bar', 2, "this should work"}, -- should display "ok"
   'exec old_tab = tab', 'exec tab = 2', 'eval tab',
-  'exec tab = old_tab', 'eval tab.foo', 'run', 
-  'eval tab.foo', 'delb test.lua 15', 'setw tab.foo == 32',
+  'exec tab = old_tab', 'eval tab.foo', 'run',
+  'eval tab.foo', 'delb auto\\test.lua 15', -- this removes breakpoint set with "setb - 15"
+  'setw tab.foo == 32',
   'run', 'eval tab.foo', 'delw 1', 'run'
 }
 

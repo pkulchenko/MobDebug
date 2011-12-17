@@ -35,7 +35,7 @@ and then start a client with:
 
 > lua loop.lua
 
-The server will detect that the client connected and will load test.lua
+The server will detect that the client connected and will load auto/test.lua
 and execute it remotely. It will run a set of commands and test values
 against expected results. This allows for testing some functionality
 on a remote platform (for example, a mobile device or a simulator) that
