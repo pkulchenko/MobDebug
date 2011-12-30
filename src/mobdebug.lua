@@ -1,5 +1,5 @@
 --
--- MobDebug 0.41
+-- MobDebug 0.411
 -- Copyright Paul Kulchenko 2011
 -- Based on RemDebug 1.0 (http://www.keplerproject.org/remdebug)
 --
@@ -10,7 +10,7 @@ module("mobdebug", package.seeall)
 
 _COPYRIGHT = "Paul Kulchenko"
 _DESCRIPTION = "Mobile Remote Debugger for the Lua programming language"
-_VERSION = "0.41"
+_VERSION = "0.411"
 
 -- this is a socket class that implements maConnect interface
 local function socketMobileLua() 
@@ -274,7 +274,30 @@ local function debugger_loop()
   local function emptyWatch () return false end
 
   while true do
-    local line = server:receive()
+    local line, err
+    if server.settimeout then server:settimeout(0.010) end
+    while true do
+      line, err = server:receive()
+      if not line and err == "timeout" then
+        -- yield for wx GUI applications if possible to avoid "busyness"
+        if wx and wx.wxGetApp then
+          local app = wx.wxGetApp()
+          local win = app:GetTopWindow()
+          if win then
+            -- process messages in a regular way
+            -- and exit as soon as the event loop is idle
+            win:Connect(wx.wxEVT_IDLE, function(event)
+              app:ExitMainLoop()
+              win:Disconnect(wx.wxID_ANY, wx.wxID_ANY, wx.wxEVT_IDLE)
+            end)
+            app:MainLoop()
+          end
+        end
+      else
+        break
+      end
+    end
+    if server.settimeout then server:settimeout() end -- back to blocking
     command = string.sub(line, string.find(line, "^[A-Z]+"))
     if command == "SETB" then
       local _, _, _, file, line = string.find(line, "^([A-Z]+)%s+([%w%p%s]+)%s+(%d+)%s*$")
