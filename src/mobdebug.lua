@@ -1,5 +1,5 @@
 --
--- MobDebug 0.412
+-- MobDebug 0.42
 -- Copyright Paul Kulchenko 2011
 -- Based on RemDebug 1.0 (http://www.keplerproject.org/remdebug)
 --
@@ -10,7 +10,7 @@ module("mobdebug", package.seeall)
 
 _COPYRIGHT = "Paul Kulchenko"
 _DESCRIPTION = "Mobile Remote Debugger for the Lua programming language"
-_VERSION = "0.412"
+_VERSION = "0.42"
 
 -- this is a socket class that implements maConnect interface
 local function socketMobileLua() 
@@ -261,13 +261,13 @@ local function debug_hook(event, line)
         end
       end
     end
+
     if step_into
     or (step_over and stack_level <= step_level)
     or has_breakpoint(file, line)
-    or check_break
-       and (socket.select({server}, {}, 0))[server] then
+    or (check_break and (socket.select({server}, {}, 0))[server]) then
       vars = vars or capture_vars()
-      check_break = true
+      check_break = true -- this is only needed to avoid breaking too early when debugging is starting
       step_into = false
       step_over = false
       coroutine.resume(coro_debugger, events.BREAK, vars, file, line)

@@ -44,3 +44,9 @@ Dec 17 2011 v0.41
     with multiline expressions.
   - Allowed 'setb' and 'delb' commands to accept '-' as the filename.
     The last referenced (checked/stopped at/etc.) filename is used.
+
+Dec 30 2011 v0.42
+  - Added support for debugging of wxwidgets applications.
+  - Added ability to break an application being debugged; this requires 
+    socket.select and async processing (doesn't work from the command line).
+
