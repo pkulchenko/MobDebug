@@ -50,3 +50,7 @@ Dec 30 2011 v0.42
   - Added ability to break an application being debugged; this requires 
     socket.select and async processing (doesn't work from the command line).
 
+Jan 16 2011 v0.43
+  - Fixed errors from LOAD/RELOAD commands when used with start() method.
+  - Added reporting of a file name and a line number to properly display
+    source code when attach to a debugger.
