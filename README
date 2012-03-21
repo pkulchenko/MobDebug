@@ -1,20 +1,22 @@
 MobDebug is a remote debugger for Lua.
 
-MobDebug lets you control the execution of another Lua program remotely, 
-setting breakpoints and inspecting the current state of the program. 
+MobDebug lets you control the execution of another Lua program remotely,
+set breakpoints, and inspect the current state of the program.
 
-MobDebug is based on RemDebug (http://www.keplerproject.org/remdebug/) and 
+MobDebug is based on RemDebug (http://www.keplerproject.org/remdebug/) and
 extends it in several ways:
 
 1. fixed several existing bugs
 2. added new commands: LOAD, RELOAD, OUT
 3. added support for MoSync clients (http://mosync.com/)
-4. tested integration with Estrela editor (http://www.luxinia.de/index.php/Estrela/)
-5. removed dependency on LuaFileSystem
+4. added support for debugging wxwidgets applications
+5. tested integration with ZeroBrane Studio IDE and Estrela editor
+   (https://github.com/pkulchenko/ZeroBraneStudio)
+6. removed dependency on LuaFileSystem
 
 INSTALLATION
 
-Make src/mobdebug.lua available to your script. 
+Make src/mobdebug.lua available to your script.
 See examples/README and examples/*.lua for examples of how to use the module.
 
 DEPENDENCIES
@@ -31,26 +33,30 @@ See LICENSE file
 
 HISTORY 
 
-Dec 02 2011 v0.40
-  - First public release.
+Mar 20 2012 v0.44
+  - Updated to work with "mosync" namespace (MobileLua 20120319 and MoSync 3.0).
+  - Removed the use of "module()".
+
+Jan 16 2012 v0.43
+  - Fixed errors from LOAD/RELOAD commands when used with start() method.
+  - Added reporting of a file name and a line number to properly display
+    source code when attach to a debugger.
+
+Dec 30 2011 v0.42
+  - Added support for debugging of wxwidgets applications.
+  - Added ability to break an application being debugged; this requires
+    socket.select and async processing (doesn't work from the command line).
 
 Dec 17 2011 v0.41
   - Added slash conversion in filenames to make breakpoints work regardless
     of how slashes are specified in file names and in setb/delb commands.
   - Added tests with breakpoints in files in subfolders.
-  - Added optimization for filename processing in the debug hook 
+  - Added optimization for filename processing in the debug hook
     (Christoph Kubisch).
   - Added conversion of newlines for EVAL/EXEC commands to make them work
     with multiline expressions.
   - Allowed 'setb' and 'delb' commands to accept '-' as the filename.
     The last referenced (checked/stopped at/etc.) filename is used.
 
-Dec 30 2011 v0.42
-  - Added support for debugging of wxwidgets applications.
-  - Added ability to break an application being debugged; this requires 
-    socket.select and async processing (doesn't work from the command line).
-
-Jan 16 2011 v0.43
-  - Fixed errors from LOAD/RELOAD commands when used with start() method.
-  - Added reporting of a file name and a line number to properly display
-    source code when attach to a debugger.
+Dec 02 2011 v0.40
+  - First public release.

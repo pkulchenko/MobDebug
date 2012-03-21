@@ -2,12 +2,11 @@ This directory contains some examples that show how MobDebug can be used.
 
 1. A server can be started with (server.lua):
 
-  require "mobdebug"
-  mobdebug.listen("*", 8171);
+  require("mobdebug").listen("*", 8171);
 
 2. A client to debug a particular script can be started with (start.lua):
 
-  require "mobdebug"
+  local mobdebug = require "mobdebug"
   mobdebug.start("localhost", 8171)
 
   print("Start")
@@ -20,8 +19,7 @@ This directory contains some examples that show how MobDebug can be used.
 
 3. A client to debug an arbitrary script can be started with (loop.lua):
 
-  require "mobdebug"
-  mobdebug.loop("localhost", 8171)
+  require("mobdebug").loop("localhost", 8171)
 
 The server can then execute "load load.lua" command, which will load
 'load.lua' script for debugging.

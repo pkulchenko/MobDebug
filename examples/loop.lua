@@ -1,3 +1,1 @@
-require "mobdebug"
-
-mobdebug.loop("localhost", 8171)
+require("mobdebug").loop("localhost", 8171)

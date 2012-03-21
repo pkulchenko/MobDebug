@@ -1,3 +1,1 @@
-require "mobdebug"
-
-mobdebug.listen("*", 8171);
+require("mobdebug").listen("*", 8171)

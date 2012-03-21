@@ -1,10 +1,10 @@
-require "mobdebug"
+local mobdebug = require "mobdebug"
 local socket = require "socket"
 local server = socket.bind('*', 8171)
 
 realprint = print
 -- uncomment the next line if you ONLY want too see debug output
--- _G.print = function () end 
+-- _G.print = function () end
 
 print("Lua Remote Debugger")
 print("Run the program you wish to debug")
