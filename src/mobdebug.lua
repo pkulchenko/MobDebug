@@ -232,6 +232,12 @@ local function capture_vars()
   return vars
 end
 
+local function stack_depth(start_depth)
+  for i = start_depth, 0, -1 do
+    if debug.getinfo(i, "l") then return i+1 end
+  end
+end
+
 local function debug_hook(event, line)
   if abort then error("aborted") end -- abort execution for RE/LOAD
   if event == "call" then
@@ -239,6 +245,13 @@ local function debug_hook(event, line)
   elseif event == "return" or event == "tail return" then
     stack_level = stack_level - 1
   elseif event == "line" then
+    -- this is needed to check if the stack got shorter.
+    -- this may happen when "pcall(load, '')" is called
+    -- or when "error()" is called in a function.
+    -- in either case there are more "call" than "return" events reported.
+    -- this validation is done for every "line" event, but should be
+    -- "cheap" as it only checks for the stack to get shorter
+    stack_level = stack_depth(stack_level)
     local caller = debug.getinfo(2, "S")
 
     -- grab the filename and fix it if needed
