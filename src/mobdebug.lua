@@ -300,6 +300,8 @@ local function debugger_loop(sfile, sline)
   local command
   local eval_env = {}
   local function emptyWatch () return false end
+  local loaded = {}
+  for k in pairs(package.loaded) do loaded[k] = true end
 
   while true do
     local line, err
@@ -368,13 +370,19 @@ local function debugger_loop(sfile, sline)
       size = tonumber(size)
 
       if abort == nil then -- no LOAD/RELOAD allowed inside start()
-        if size > 0 then local _ = server:receive(size) end
+        if size > 0 then server:receive(size) end
         if sfile and sline then
           server:send("201 Started " .. sfile .. " " .. sline .. "\n")
         else
           server:send("200 OK 0\n")
         end
       else
+        -- reset environment to allow required modules to load again
+        -- remove those packages that weren't loaded when debugger started
+        for k in pairs(package.loaded) do
+          if not loaded[k] then package.loaded[k] = nil end
+        end
+
         if size == 0 then -- RELOAD the current script being debugged
           server:send("200 OK 0\n")
           abort = true
