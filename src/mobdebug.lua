@@ -298,6 +298,7 @@ end
 
 local function debugger_loop(sfile, sline)
   local command
+  local app
   local eval_env = {}
   local function emptyWatch () return false end
   local loaded = {}
@@ -305,20 +306,20 @@ local function debugger_loop(sfile, sline)
 
   while true do
     local line, err
-    if server.settimeout then server:settimeout(0.010) end
+    if wx and server.settimeout then server:settimeout(0.010) end
     while true do
       line, err = server:receive()
       if not line and err == "timeout" then
         -- yield for wx GUI applications if possible to avoid "busyness"
-        if wx and wx.wxGetApp then
-          local app = wx.wxGetApp()
+        app = app or (wx and wx.wxGetApp and wx.wxGetApp())
+        if app then
           local win = app:GetTopWindow()
           if win then
             -- process messages in a regular way
             -- and exit as soon as the event loop is idle
             win:Connect(wx.wxEVT_IDLE, function(event)
-              app:ExitMainLoop()
               win:Disconnect(wx.wxID_ANY, wx.wxID_ANY, wx.wxEVT_IDLE)
+              app:ExitMainLoop()
             end)
             app:MainLoop()
           end
