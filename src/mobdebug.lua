@@ -278,7 +278,6 @@ local function debug_hook(event, line)
         local status, res = pcall(value)
         if status and res then
           coroutine.resume(coro_debugger, events.WATCH, vars, file, line, index)
-          restore_vars(vars)
         end
       end
     end
@@ -293,6 +292,7 @@ local function debug_hook(event, line)
       step_over = false
       coroutine.resume(coro_debugger, events.BREAK, vars, file, line)
     end
+    if vars then restore_vars(vars) end
   end
 end
 
