@@ -239,7 +239,15 @@ local function stack_depth(start_depth)
 end
 
 local function debug_hook(event, line)
-  if abort then error("aborted") end -- abort execution for RE/LOAD
+  if abort then
+    -- check the stack to see if there are any C functions above us
+    for i = 2, stack_level+1 do
+      -- simply return if it is not safe to abort
+      local source = debug.getinfo(i, "S")
+      if source and source.what == "C" then return end
+    end
+    error("aborted") -- abort execution for RE/LOAD
+  end
   if event == "call" then
     stack_level = stack_level + 1
   elseif event == "return" or event == "tail return" then
