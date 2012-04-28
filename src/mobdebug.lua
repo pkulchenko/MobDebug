@@ -395,23 +395,23 @@ local function debugger_loop(sfile, sline)
         if size == 0 then -- RELOAD the current script being debugged
           server:send("200 OK 0\n")
           abort = true
-          coroutine.yield() -- this should not return as the hook will abort
-        end
-
-        local chunk = server:receive(size)
-        if chunk then -- LOAD a new script for debugging
-          local func, res = loadstring(chunk, name)
-          if func then
-            server:send("200 OK 0\n")
-            debugee = func
-            abort = true
-            coroutine.yield() -- this should not return as the hook will abort
-          else
-            server:send("401 Error in Expression " .. string.len(res) .. "\n")
-            server:send(res)
-          end
+          coroutine.yield()
         else
-          server:send("400 Bad Request\n")
+          local chunk = server:receive(size)
+          if chunk then -- LOAD a new script for debugging
+            local func, res = loadstring(chunk, name)
+            if func then
+              server:send("200 OK 0\n")
+              debugee = func
+              abort = true
+              coroutine.yield()
+            else
+              server:send("401 Error in Expression " .. string.len(res) .. "\n")
+              server:send(res)
+            end
+          else
+            server:send("400 Bad Request\n")
+          end
         end
       end
     elseif command == "SETW" then
@@ -568,7 +568,9 @@ local function handle(params, client)
       return -- use return here for those cases where os.exit() is not wanted
     end
     local _, _, status = string.find(breakpoint, "^(%d+)")
-    if status == "202" then
+    if status == "200" then
+      -- don't need to do anything
+    elseif status == "202" then
       _, _, file, line = string.find(breakpoint, "^202 Paused%s+([%w%p%s]+)%s+(%d+)%s*$")
       if file and line then 
         print("Paused at file " .. file .. " line " .. line)
@@ -589,7 +591,8 @@ local function handle(params, client)
     else
       print("Unknown error")
       os.exit()
-      return nil, nil, "Unknown error" -- use return here for those cases where os.exit() is not wanted
+      -- use return here for those cases where os.exit() is not wanted
+      return nil, nil, "Unknown error; unexpected response '" .. breakpoint .. "'"
     end
   elseif command == "setb" then
     _, _, _, file, line = string.find(params, "^([a-z]+)%s+([%w%p%s]+)%s+(%d+)%s*$")
@@ -669,7 +672,8 @@ local function handle(params, client)
       end
     end    
   elseif command == "eval" or command == "exec" 
-      or command == "load" or command == "reload" then
+      or command == "load" or command == "loadstring"
+      or command == "reload" then
     local _, _, exp = string.find(params, "^[a-z]+%s+(.+)$")
     if exp or (command == "reload") then 
       if command == "eval" then
@@ -680,6 +684,13 @@ local function handle(params, client)
         client:send("EXEC " .. exp .. "\n")
       elseif command == "reload" then
         client:send("LOAD 0 -\n")
+      elseif command == "loadstring" then
+        local _, _, _, file, lines = string.find(exp, "^([\"'])(.-)%1%s+(.+)")
+        if not file then
+           _, _, file, lines = string.find(exp, "^(%S+)%s+(.+)")
+        end
+        client:send("LOAD " .. string.len(lines) .. " " .. file .. "\n")
+        client:send(lines)
       else
         local file = io.open(exp, "r")
         if not file then print("Cannot open file " .. exp); return end
@@ -709,7 +720,7 @@ local function handle(params, client)
         return nil, nil, res
       else
         print("Unknown error")
-        return nil, nil, "Unknown error"
+        return nil, nil, "Unknown error after EXEC/LOAD; unexpected response '" .. params .. "'"
       end
     else
       print("Invalid command")
