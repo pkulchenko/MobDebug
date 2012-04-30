@@ -485,6 +485,8 @@ local function debugger_loop(sfile, sline)
         server:send("401 Error in Execution " .. string.len(file) .. "\n")
         server:send(file)
       end
+    elseif command == "SUSPEND" then
+      -- do nothing; it already fulfilled its role
     elseif command == "EXIT" then
       server:send("200 OK\n")
       os.exit()
@@ -592,7 +594,7 @@ local function handle(params, client)
       print("Unknown error")
       os.exit()
       -- use return here for those cases where os.exit() is not wanted
-      return nil, nil, "Unknown error; unexpected response '" .. breakpoint .. "'"
+      return nil, nil, "Debugger error; unexpected response '" .. breakpoint .. "'"
     end
   elseif command == "setb" then
     _, _, _, file, line = string.find(params, "^([a-z]+)%s+([%w%p%s]+)%s+(%d+)%s*$")
@@ -726,7 +728,7 @@ local function handle(params, client)
         return nil, nil, res
       else
         print("Unknown error")
-        return nil, nil, "Unknown error after EXEC/LOAD; unexpected response '" .. params .. "'"
+        return nil, nil, "Debugger error after EXEC/LOAD; unexpected response '" .. params .. "'"
       end
     else
       print("Invalid command")
@@ -743,6 +745,8 @@ local function handle(params, client)
     for i, v in pairs(watches) do
       print("Watch exp. " .. i .. ": " .. v)
     end    
+  elseif command == "suspend" then
+    client:send("SUSPEND\n")
   elseif command == "basedir" then
     local _, _, dir = string.find(params, "^[a-z]+%s+(.+)$")
     if dir then
