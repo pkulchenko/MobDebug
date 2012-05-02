@@ -330,7 +330,7 @@ local function debugger_loop(sfile, sline)
 
   while true do
     local line, err
-    if wx and server.settimeout then server:settimeout(0.010) end
+    if wx and server.settimeout then server:settimeout(0.1) end
     while true do
       line, err = server:receive()
       if not line and err == "timeout" then
