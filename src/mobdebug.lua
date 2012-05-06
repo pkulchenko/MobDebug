@@ -567,6 +567,7 @@ local function controller(controller_host, controller_port)
     while true do 
       step_into = true
       abort = false
+      if skip then skipcount = skip end -- to force suspend right away
 
       local coro_debugee = coroutine.create(debugee)
       debug.sethook(coro_debugee, debug_hook, "lcr")
