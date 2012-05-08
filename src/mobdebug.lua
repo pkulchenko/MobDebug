@@ -553,6 +553,7 @@ local function start(controller_host, controller_port)
 end
 
 local function controller(controller_host, controller_port)
+  local exitonerror = not skip -- exit if not running a scratchpad
   server = socket.connect(controller_host, controller_port)
   if server then
     local function report(trace, err)
@@ -580,6 +581,7 @@ local function controller(controller_host, controller_port)
           break
         elseif not err:find(deferror) then -- report the error
           report(debug.traceback(coro_debugee), err)
+          if exitonerror then break end
           -- resume once more to clear the response the debugger wants to send
           coroutine.resume(coro_debugger, events.RESTART)
         end
