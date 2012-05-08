@@ -239,6 +239,7 @@ local function stack_depth(start_depth)
   for i = start_depth, 0, -1 do
     if debug.getinfo(i, "l") then return i+1 end
   end
+  return start_depth
 end
 
 local function is_safe(stack_level, conservative)
