@@ -198,7 +198,7 @@ local function restore_vars(vars)
   while true do
     local name = debug.getlocal(3, i)
     if not name then break end
-    debug.setlocal(3, i, vars[name])
+    if string.sub(name, 1, 1) ~= '(' then debug.setlocal(3, i, vars[name]) end
     written_vars[name] = true
     i = i + 1
   end
@@ -207,7 +207,7 @@ local function restore_vars(vars)
     local name = debug.getupvalue(func, i)
     if not name then break end
     if not written_vars[name] then
-      debug.setupvalue(func, i, vars[name])
+      if string.sub(name, 1, 1) ~= '(' then debug.setupvalue(func, i, vars[name]) end
       written_vars[name] = true
     end
     i = i + 1
@@ -221,14 +221,14 @@ local function capture_vars()
   while true do
     local name, value = debug.getupvalue(func, i)
     if not name then break end
-    vars[name] = value
+    if string.sub(name, 1, 1) ~= '(' then vars[name] = value end
     i = i + 1
   end
   i = 1
   while true do
     local name, value = debug.getlocal(3, i)
     if not name then break end
-    vars[name] = value
+    if string.sub(name, 1, 1) ~= '(' then vars[name] = value end
     i = i + 1
   end
   setmetatable(vars, { __index = getfenv(func), __newindex = getfenv(func) })
