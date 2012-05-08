@@ -1,5 +1,5 @@
 --
--- MobDebug 0.446
+-- MobDebug 0.447
 -- Copyright Paul Kulchenko 2011-2012
 -- Based on RemDebug 1.0 (http://www.keplerproject.org/remdebug)
 --
@@ -8,7 +8,7 @@ local mobdebug = {
   _NAME = "mobdebug",
   _COPYRIGHT = "Paul Kulchenko",
   _DESCRIPTION = "Mobile Remote Debugger for the Lua programming language",
-  _VERSION = "0.446"
+  _VERSION = "0.447"
 }
 
 local coroutine = coroutine
@@ -731,11 +731,11 @@ local function handle(params, client)
       or command == "reload" then
     local _, _, exp = string.find(params, "^[a-z]+%s+(.+)$")
     if exp or (command == "reload") then 
-      if command == "eval" then
-        exp = string.gsub(exp, "\n", " ") -- convert new lines
-        client:send("EXEC return " .. exp .. "\n")
-      elseif command == "exec" then
-        exp = string.gsub(exp, "\n", " ") -- convert new lines
+      if command == "eval" or command == "exec" then
+        exp = (exp:gsub("%-%-%[(=*)%[.-%]%1%]", "") -- remove comments
+                  :gsub("%-%-.-\n", " ") -- remove line comments
+                  :gsub("\n", " ")) -- convert new lines
+        if command == "eval" then exp = "return " .. exp end
         client:send("EXEC " .. exp .. "\n")
       elseif command == "reload" then
         client:send("LOAD 0 -\n")
