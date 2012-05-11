@@ -1,5 +1,5 @@
 --
--- MobDebug 0.447
+-- MobDebug 0.448
 -- Copyright Paul Kulchenko 2011-2012
 -- Based on RemDebug 1.0 (http://www.keplerproject.org/remdebug)
 --
@@ -8,7 +8,7 @@ local mobdebug = {
   _NAME = "mobdebug",
   _COPYRIGHT = "Paul Kulchenko",
   _DESCRIPTION = "Mobile Remote Debugger for the Lua programming language",
-  _VERSION = "0.447"
+  _VERSION = "0.448"
 }
 
 local coroutine = coroutine
@@ -27,7 +27,13 @@ local mosync = mosync
 -- this is a socket class that implements maConnect interface
 local function socketMobileLua() 
   local self = {}
-  self.select = function() return {} end
+  self.select = function(readfrom) -- writeto and timeout parameters are ignored
+    local canread = {}
+    for _,s in ipairs(readfrom) do
+      if s:receive(0) then canread[s] = true end
+    end
+    return canread
+  end
   self.connect = coroutine.wrap(function(host, port)
     while true do
       local connection = mosync.maConnect("socket://" .. host .. ":" .. port)
@@ -73,7 +79,7 @@ local function socketMobileLua()
           end
           return s
         end
-        self.send = coroutine.wrap(function(self, msg) 
+        self.send = coroutine.wrap(function(self, msg)
           while true do
             local numberOfBytes = stringToBuffer(msg, outBuffer)
             mosync.maConnWrite(connection, outBuffer, numberOfBytes)
@@ -92,23 +98,27 @@ local function socketMobileLua()
             self, msg = coroutine.yield()
           end
         end)
-        self.receive = coroutine.wrap(function(self, len) 
+        self.receive = coroutine.wrap(function(self, len)
           while true do
             local line = recvBuffer
             while (len and string.len(line) < len)     -- either we need len bytes
-               or (not len and not line:find("\n")) do -- or one line (if no len specified)
+               or (not len and not line:find("\n")) -- or one line (if no len specified)
+               or (len == 0) do -- only check for new data (select-like)
               mosync.maConnRead(connection, inBuffer, 1000)
               while true do
-                mosync.maWait(0)
+                if len ~= 0 then mosync.maWait(0) end
                 mosync.maGetEvent(event)
                 local eventType = mosync.SysEventGetType(event)
                 if (mosync.EVENT_TYPE_CLOSE == eventType) then mosync.maExit(0) end
                 if (mosync.EVENT_TYPE_CONN == eventType and
                     mosync.SysEventGetConnHandle(event) == connection and
                     mosync.SysEventGetConnOpType(event) == mosync.CONNOP_READ) then
-                  local result = mosync.SysEventGetConnResult(event);
+                  local result = mosync.SysEventGetConnResult(event)
                   if result > 0 then line = line .. bufferToString(inBuffer, result) end
-                  break; -- got the event we wanted; now check if we have all we need
+                  if len == 0 then self, len = coroutine.yield("") end
+                  break -- got the event we wanted; now check if we have all we need
+                elseif len == 0 then
+                  self, len = coroutine.yield(nil)
                 end
               end  
             end
