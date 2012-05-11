@@ -257,13 +257,6 @@ local function is_safe(stack_level, conservative)
 end
 
 local function debug_hook(event, line)
-  if abort then
-    if is_safe(stack_level) then
-      error("aborted") -- abort execution for RE/LOAD
-    else
-      return
-    end
-  end
   if event == "call" then
     stack_level = stack_level + 1
   elseif event == "return" or event == "tail return" then
@@ -328,7 +321,11 @@ local function debug_hook(event, line)
       check_break = true -- this is only needed to avoid breaking too early when debugging is starting
       step_into = false
       step_over = false
-      coroutine.resume(coro_debugger, events.BREAK, vars, file, line)
+      local status, res = coroutine.resume(coro_debugger, events.BREAK, vars, file, line)
+      if status and res then
+        abort = res
+        error(abort)
+      end -- abort execution if requested
     end
     if vars then restore_vars(vars) end
   end
@@ -424,8 +421,7 @@ local function debugger_loop(sfile, sline)
 
         if size == 0 then -- RELOAD the current script being debugged
           server:send("200 OK 0\n")
-          abort = true
-          coroutine.yield()
+          coroutine.yield("load")
         else
           local chunk = server:receive(size)
           if chunk then -- LOAD a new script for debugging
@@ -433,8 +429,7 @@ local function debugger_loop(sfile, sline)
             if func then
               server:send("200 OK 0\n")
               debugee = func
-              abort = true
-              coroutine.yield()
+              coroutine.yield("load")
             else
               server:send("401 Error in Expression " .. string.len(res) .. "\n")
               server:send(res)
@@ -525,7 +520,7 @@ local function debugger_loop(sfile, sline)
       -- do nothing; it already fulfilled its role
     elseif command == "EXIT" then
       server:send("200 OK\n")
-      os.exit()
+      coroutine.yield("exit")
     else
       server:send("400 Bad Request\n")
     end
@@ -577,7 +572,9 @@ local function controller(controller_host, controller_port)
 
       -- was there an error or is the script done?
       -- 'abort' state is allowed here; ignore it
-      if not abort then
+      if abort then
+        if tostring(abort) == 'exit' then break end
+      else
         if status then -- normal execution is done
           break
         elseif not err:find(deferror) then -- report the error
