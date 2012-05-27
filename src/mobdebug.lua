@@ -45,13 +45,14 @@ local function socketMobileLua()
           mosync.maWait(0)
           mosync.maGetEvent(event)
           local eventType = mosync.SysEventGetType(event)
-          if (mosync.EVENT_TYPE_CLOSE == eventType) then mosync.maExit(0) end
           if (mosync.EVENT_TYPE_CONN == eventType and
             mosync.SysEventGetConnHandle(event) == connection and
             mosync.SysEventGetConnOpType(event) == mosync.CONNOP_CONNECT) then
               -- result > 0 ? success : error
               if not (mosync.SysEventGetConnResult(event) > 0) then connection = nil end
               break
+          elseif mosync.EventMonitor and mosync.EventMonitor.HandleEvent then
+            mosync.EventMonitor:HandleEvent(event)
           end
         end
         mosync.SysFree(event)
@@ -84,16 +85,16 @@ local function socketMobileLua()
           while true do
             local numberOfBytes = stringToBuffer(msg, outBuffer)
             mosync.maConnWrite(connection, outBuffer, numberOfBytes)
-            local result = 0
             while true do
               mosync.maWait(0)
               mosync.maGetEvent(event)
               local eventType = mosync.SysEventGetType(event)
-              if (mosync.EVENT_TYPE_CLOSE == eventType) then mosync.maExit(0) end
               if (mosync.EVENT_TYPE_CONN == eventType and
                   mosync.SysEventGetConnHandle(event) == connection and
                   mosync.SysEventGetConnOpType(event) == mosync.CONNOP_WRITE) then
                 break
+              elseif mosync.EventMonitor and mosync.EventMonitor.HandleEvent then
+                mosync.EventMonitor:HandleEvent(event)
               end
             end
             self, msg = coroutine.yield()
@@ -110,7 +111,6 @@ local function socketMobileLua()
                 if len ~= 0 then mosync.maWait(0) end
                 mosync.maGetEvent(event)
                 local eventType = mosync.SysEventGetType(event)
-                if (mosync.EVENT_TYPE_CLOSE == eventType) then mosync.maExit(0) end
                 if (mosync.EVENT_TYPE_CONN == eventType and
                     mosync.SysEventGetConnHandle(event) == connection and
                     mosync.SysEventGetConnOpType(event) == mosync.CONNOP_READ) then
@@ -120,6 +120,8 @@ local function socketMobileLua()
                   break -- got the event we wanted; now check if we have all we need
                 elseif len == 0 then
                   self, len = coroutine.yield(nil)
+                elseif mosync.EventMonitor and mosync.EventMonitor.HandleEvent then
+                  mosync.EventMonitor:HandleEvent(event)
                 end
               end  
             end
@@ -149,6 +151,14 @@ local function socketMobileLua()
   end)
 
   return self
+end
+
+-- overwrite RunEventLoop in MobileLua as it conflicts with the event
+-- loop that needs to run to process debugger events (socket read/write).
+-- event loop functionality is implemented by calling HandleEvent
+-- while waiting for debugger events.
+if mosync and mosync.EventMonitor then
+  mosync.EventMonitor.RunEventLoop = function(self) end
 end
 
 local socket = mosync and socketMobileLua() or (require "socket")
@@ -583,8 +593,10 @@ local function controller(controller_host, controller_port)
       else
         if status then -- normal execution is done
           break
-        elseif err and not err:find(deferror) then -- report the error
-          report(debug.traceback(coro_debugee), err)
+        elseif err and not tostring(err):find(deferror) then
+          -- report the error back
+          -- err is not necessarily a string, so convert to string to report
+          report(debug.traceback(coro_debugee), tostring(err))
           if exitonerror then break end
           -- resume once more to clear the response the debugger wants to send
           local status, err = coroutine.resume(coro_debugger, events.RESTART)
