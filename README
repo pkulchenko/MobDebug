@@ -8,11 +8,13 @@ extends it in several ways:
 
 1. fixed several existing bugs
 2. added new commands: LOAD, RELOAD, OUT
-3. added support for MoSync clients (http://mosync.com/)
+3. added support for MoSync clients (http://mosync.com/) using
+   MobileLua (https://github.com/divineprog/mobilelua)
 4. added support for debugging wxwidgets applications
 5. tested integration with ZeroBrane Studio IDE and Estrela editor
    (https://github.com/pkulchenko/ZeroBraneStudio)
 6. removed dependency on LuaFileSystem
+7. added ability to pause and abort running applications
 
 INSTALLATION
 
@@ -32,6 +34,25 @@ LICENSE
 See LICENSE file
 
 HISTORY 
+
+May 28 2012 v0.45
+  - Added select() implementation to mosync client to abort/break a running
+    mosync app.
+  - Added support for scratchpad.
+  - Added SUSPEND command to suspend execution of a running script.
+  - Added 'loadstring' command to load chunks of code to run under debugger.
+  - Added safety mechanism to LOAD/RELOAD to avoid aborting when there are
+    C functions in the stack.
+  - Added reset for loaded modules to get 'require' to be processed correctly
+    after LOAD/RELOAD commands.
+  - Added integration with MobileLua event loop to allow debugging of
+    applications that require event loop processing.
+  - Improved handling and reporting of run-time errors during debugging.
+  - Fixed handling of multi-line fragments with comments executed with EXEC/EVAL.
+  - Fixed exit from the debugger when the application throws an error.
+  - Fixed an issue with saving/restoring internal local variables.
+  - Fixed an issue with local variables not being updated after EXEC/EVAL
+    commands.
 
 Mar 20 2012 v0.44
   - Updated to work with "mosync" namespace (MobileLua 20120319 and MoSync 3.0).
