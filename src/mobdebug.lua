@@ -1,5 +1,5 @@
 --
--- MobDebug 0.452
+-- MobDebug 0.453
 -- Copyright Paul Kulchenko 2011-2012
 -- Based on RemDebug 1.0 Copyright Kepler Project 2005
 -- (http://www.keplerproject.org/remdebug)
@@ -9,7 +9,7 @@ local mobdebug = {
   _NAME = "mobdebug",
   _COPYRIGHT = "Paul Kulchenko",
   _DESCRIPTION = "Mobile Remote Debugger for the Lua programming language",
-  _VERSION = "0.452"
+  _VERSION = "0.453"
 }
 
 local coroutine = coroutine
@@ -469,12 +469,19 @@ local function debug_hook(event, line)
       step_into = false
       step_over = false
       local status, res = coroutine.resume(coro_debugger, events.BREAK, vars, file, line)
+
+      -- handle 'stack' command that provides stack() information to the debugger
       if status and res == 'stack' then
         while status and res == 'stack' do
           -- resume with the stack trace and variables
           status, res = coroutine.resume(coro_debugger, events.STACK, stack(3), file, line)
         end
-      elseif status and res then
+      end
+
+      -- need to recheck once more as resume after 'stack' command may
+      -- return something else (for example, 'exit'), which needs to be handled
+      if status and res and res ~= 'stack' then
+        if abort == nil and res == "exit" then os.exit(1) end
         abort = res
         error(abort)
       end -- abort execution if requested
@@ -687,7 +694,7 @@ local function debugger_loop(sfile, sline)
       local ev, vars = coroutine.yield("stack")
       if ev == events.STACK then
         server:send("200 OK " .. serpent.dump(vars,
-          {nocode = true, sparse = false, ignore = {[mobdebug] = true}}) .. "\n")
+          {nocode = true, sparse = false}) .. "\n")
       else
         server:send("401 Error in Expression 0\n")
       end
@@ -813,12 +820,12 @@ local function handle(params, client)
       if size then
         local msg = client:receive(tonumber(size))
         print("Error in remote application: " .. msg)
-        os.exit()
+        os.exit(1)
         return nil, nil, msg -- use return here for those cases where os.exit() is not wanted
       end
     else
       print("Unknown error")
-      os.exit()
+      os.exit(1)
       -- use return here for those cases where os.exit() is not wanted
       return nil, nil, "Debugger error: unexpected response '" .. breakpoint .. "'"
     end
