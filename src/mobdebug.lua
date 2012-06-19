@@ -1,5 +1,5 @@
 --
--- MobDebug 0.454
+-- MobDebug 0.455
 -- Copyright Paul Kulchenko 2011-2012
 -- Based on RemDebug 1.0 Copyright Kepler Project 2005
 -- (http://www.keplerproject.org/remdebug)
@@ -9,7 +9,7 @@ local mobdebug = {
   _NAME = "mobdebug",
   _COPYRIGHT = "Paul Kulchenko",
   _DESCRIPTION = "Mobile Remote Debugger for the Lua programming language",
-  _VERSION = "0.454"
+  _VERSION = "0.455"
 }
 
 local coroutine = coroutine
@@ -296,7 +296,7 @@ local function stack(start)
     end
     i = 1
     local ups = {}
-    while true do
+    while func and true do -- check for func as it may be nil for tail calls
       local name, value = debug.getupvalue(func, i)
       if not name then break end
       ups[name] = {value, tostring(value)}
@@ -306,15 +306,15 @@ local function stack(start)
   end
 
   local stack = {}
-    for i = (start or 0), 100 do
-      local source = debug.getinfo(i, "Snl")
-      if not source then break end
-      table.insert(stack, {
-        {source.name, source.source, source.linedefined,
-         source.currentline, source.what, source.namewhat},
-        vars(i+1)})
-      if source.what == 'main' then break end
-    end
+  for i = (start or 0), 100 do
+    local source = debug.getinfo(i, "Snl")
+    if not source then break end
+    table.insert(stack, {
+      {source.name, source.source, source.linedefined,
+       source.currentline, source.what, source.namewhat},
+      vars(i+1)})
+    if source.what == 'main' then break end
+  end
   return stack
 end
 
