@@ -1,5 +1,4 @@
-local mobdebug = require "mobdebug"
-mobdebug.start("localhost", 8171)
+require("mobdebug").start("localhost", 8171)
 
 print("Start")
 local foo = 0

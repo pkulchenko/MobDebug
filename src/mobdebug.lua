@@ -1,5 +1,5 @@
 --
--- MobDebug 0.455
+-- MobDebug 0.46
 -- Copyright Paul Kulchenko 2011-2012
 -- Based on RemDebug 1.0 Copyright Kepler Project 2005
 -- (http://www.keplerproject.org/remdebug)
@@ -9,7 +9,7 @@ local mobdebug = {
   _NAME = "mobdebug",
   _COPYRIGHT = "Paul Kulchenko",
   _DESCRIPTION = "Mobile Remote Debugger for the Lua programming language",
-  _VERSION = "0.455"
+  _VERSION = "0.46"
 }
 
 local coroutine = coroutine
@@ -1049,16 +1049,17 @@ local function handle(params, client)
     print("setw <exp>            -- adds a new watch expression")
     print("delw <index>          -- removes the watch expression at index")
     print("delallw               -- removes all watch expressions")
-    print("run                   -- run until next breakpoint")
-    print("step                  -- run until next line, stepping into function calls")
-    print("over                  -- run until next line, stepping over function calls")
-    print("out                   -- run until line after returning from current function")
+    print("run                   -- runs until next breakpoint")
+    print("step                  -- runs until next line, stepping into function calls")
+    print("over                  -- runs until next line, stepping over function calls")
+    print("out                   -- runs until line after returning from current function")
     print("listb                 -- lists breakpoints")
     print("listw                 -- lists watch expressions")
     print("eval <exp>            -- evaluates expression on the current context and returns its value")
     print("exec <stmt>           -- executes statement on the current context")
     print("load <file>           -- loads a local file for debugging")
     print("reload                -- restarts the current debugging session")
+    print("stack                 -- reports stack trace")
     print("basedir [<path>]      -- sets the base path of the remote application, or shows the current one")
     print("exit                  -- exits debugger")
   else

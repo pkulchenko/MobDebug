@@ -37,6 +37,11 @@ See LICENSE file
 
 HISTORY 
 
+Jun 19 2012 v0.46
+  - Added reporting of stack and variable (local/upvalue) information.
+  - Added support for multiple results returned by EXEC/EVAL commands.
+  - Added serialization/pretty-printing of results from EXEC/EVAL.
+
 May 28 2012 v0.45
   - Added select() implementation to mosync client to abort/break a running
     mosync app.
