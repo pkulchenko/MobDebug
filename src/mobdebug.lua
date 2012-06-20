@@ -1,5 +1,5 @@
 --
--- MobDebug 0.462
+-- MobDebug 0.463
 -- Copyright Paul Kulchenko 2011-2012
 -- Based on RemDebug 1.0 Copyright Kepler Project 2005
 -- (http://www.keplerproject.org/remdebug)
@@ -9,7 +9,7 @@ local mobdebug = {
   _NAME = "mobdebug",
   _COPYRIGHT = "Paul Kulchenko",
   _DESCRIPTION = "Mobile Remote Debugger for the Lua programming language",
-  _VERSION = "0.462"
+  _VERSION = "0.463"
 }
 
 local coroutine = coroutine
@@ -404,6 +404,8 @@ local function is_safe(stack_level, conservative)
 end
 
 local function debug_hook(event, line)
+  if abort and is_safe(stack_level) then error(abort) end
+
   if event == "call" then
     stack_level = stack_level + 1
   elseif event == "return" or event == "tail return" then
@@ -454,16 +456,10 @@ local function debug_hook(event, line)
       end
     end
 
-    local suspend = (check_break
-      -- stack check is at least two times faster than select
-      -- 1.2s vs 2.5s for 100,000 iterations on 1.6Ghz CPU
-      and is_safe(stack_level)
-      and (socket.select({server}, {}, 0))[server]
-    )
-    if suspend
-    or step_into
+    if step_into
     or (step_over and stack_level <= step_level)
-    or has_breakpoint(file, line) then
+    or has_breakpoint(file, line)
+    or check_break and (socket.select({server}, {}, 0))[server] then
       vars = vars or capture_vars()
       check_break = true -- this is only needed to avoid breaking too early when debugging is starting
       step_into = false
@@ -483,7 +479,9 @@ local function debug_hook(event, line)
       if status and res and res ~= 'stack' then
         if abort == nil and res == "exit" then os.exit(1) end
         abort = res
-        error(abort)
+        -- only abort if safe; if not, there is another (earlier) check inside
+        -- debug_hook, which will abort execution at the first safe opportunity
+        if is_safe(stack_level) then error(abort) end
       end -- abort execution if requested
     end
     if vars then restore_vars(vars) end
