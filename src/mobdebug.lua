@@ -1,5 +1,5 @@
 --
--- MobDebug 0.46
+-- MobDebug 0.461
 -- Copyright Paul Kulchenko 2011-2012
 -- Based on RemDebug 1.0 Copyright Kepler Project 2005
 -- (http://www.keplerproject.org/remdebug)
@@ -9,7 +9,7 @@ local mobdebug = {
   _NAME = "mobdebug",
   _COPYRIGHT = "Paul Kulchenko",
   _DESCRIPTION = "Mobile Remote Debugger for the Lua programming language",
-  _VERSION = "0.46"
+  _VERSION = "0.461"
 }
 
 local coroutine = coroutine
@@ -311,7 +311,7 @@ local function stack(start)
     if not source then break end
     table.insert(stack, {
       {source.name, source.source, source.linedefined,
-       source.currentline, source.what, source.namewhat},
+       source.currentline, source.what, source.namewhat, source.short_src},
       vars(i+1)})
     if source.what == 'main' then break end
   end
