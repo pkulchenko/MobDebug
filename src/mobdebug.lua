@@ -1,5 +1,5 @@
 --
--- MobDebug 0.461
+-- MobDebug 0.462
 -- Copyright Paul Kulchenko 2011-2012
 -- Based on RemDebug 1.0 Copyright Kepler Project 2005
 -- (http://www.keplerproject.org/remdebug)
@@ -9,7 +9,7 @@ local mobdebug = {
   _NAME = "mobdebug",
   _COPYRIGHT = "Paul Kulchenko",
   _DESCRIPTION = "Mobile Remote Debugger for the Lua programming language",
-  _VERSION = "0.461"
+  _VERSION = "0.462"
 }
 
 local coroutine = coroutine
@@ -726,6 +726,12 @@ local function start(controller_host, controller_port)
     local file = info.source
     if string.find(file, "@") == 1 then file = string.sub(file, 2) end
     if string.find(file, "%.[/\\]") == 1 then file = string.sub(file, 3) end
+
+    -- correct stack depth which already has some calls on it
+    -- so it doesn't go into negative when those calls return
+    -- as this breaks subsequence checks in stack_depth().
+    -- start from 16th frame, which is sufficiently large for this check.
+    stack_level = stack_depth(16)
 
     debug.sethook(debug_hook, "lcr")
     coro_debugger = coroutine.create(debugger_loop)
