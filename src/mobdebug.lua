@@ -1,15 +1,15 @@
 --
--- MobDebug 0.463
--- Copyright Paul Kulchenko 2011-2012
+-- MobDebug 0.464
+-- Copyright 2011-12 Paul Kulchenko
 -- Based on RemDebug 1.0 Copyright Kepler Project 2005
--- (http://www.keplerproject.org/remdebug)
 --
 
 local mobdebug = {
   _NAME = "mobdebug",
+  _VERSION = 0.464,
   _COPYRIGHT = "Paul Kulchenko",
   _DESCRIPTION = "Mobile Remote Debugger for the Lua programming language",
-  _VERSION = "0.463"
+  port = 8171
 }
 
 local coroutine = coroutine
@@ -718,6 +718,9 @@ local function start(controller_host, controller_port)
   -- only one debugging session can be run (as there is only one debug hook)
   if isrunning() then return end
 
+  controller_host = controller_host or "localhost"
+  controller_port = controller_port or mobdebug.port
+
   server = socket.connect(controller_host, controller_port)
   if server then
     local info = debug.getinfo(2, "Sl")
@@ -742,6 +745,9 @@ end
 local function controller(controller_host, controller_port)
   -- only one debugging session can be run (as there is only one debug hook)
   if isrunning() then return end
+
+  controller_host = controller_host or "localhost"
+  controller_port = controller_port or mobdebug.port
 
   local exitonerror = not skip -- exit if not running a scratchpad
   server = socket.connect(controller_host, controller_port)
@@ -1078,6 +1084,8 @@ end
 
 -- Starts debugging server
 local function listen(host, port)
+  host = host or "*"
+  port = port or mobdebug.port
 
   local socket = require "socket"
 
