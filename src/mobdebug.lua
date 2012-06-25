@@ -1,12 +1,12 @@
 --
--- MobDebug 0.466
+-- MobDebug 0.467
 -- Copyright 2011-12 Paul Kulchenko
 -- Based on RemDebug 1.0 Copyright Kepler Project 2005
 --
 
 local mobdebug = {
   _NAME = "mobdebug",
-  _VERSION = 0.466,
+  _VERSION = 0.467,
   _COPYRIGHT = "Paul Kulchenko",
   _DESCRIPTION = "Mobile Remote Debugger for the Lua programming language",
   port = 8171
@@ -482,9 +482,7 @@ local function debug_hook(event, line)
     if step_into
     or (step_over and stack_level <= step_level)
     or has_breakpoint(file, line)
-    -- seen_hook protects select() check to avoid breaking when debugging
-    -- is starting and before debug hook has been visited at least once.
-    or seen_hook and (socket.select({server}, {}, 0))[server] then
+    or (socket.select({server}, {}, 0))[server] then
       vars = vars or capture_vars()
       seen_hook = true
       step_into = false
