@@ -37,6 +37,15 @@ See LICENSE file
 
 HISTORY 
 
+Jun 28 2012 v0.47
+  - Added special handling to debug clients running under LuaJIT.
+  - Fixed an issue when a remote client could not suspend/exit.
+  - Added default configuration for start/loop/listen methods.
+  - Relaxed safety checks to allow debugging lua code called from C
+    functions (to support debugging Love2d and similar applications).
+  - Fixed incorrect initial stack level when started with start() command.
+  - Added short_src field to the reported stack data.
+
 Jun 19 2012 v0.46
   - Added reporting of stack and variable (local/upvalue) information.
   - Added support for multiple results returned by EXEC/EVAL commands.
