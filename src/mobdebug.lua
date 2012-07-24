@@ -1,12 +1,12 @@
 --
--- MobDebug 0.474
+-- MobDebug 0.475
 -- Copyright 2011-12 Paul Kulchenko
 -- Based on RemDebug 1.0 Copyright Kepler Project 2005
 --
 
 local mobdebug = {
   _NAME = "mobdebug",
-  _VERSION = 0.474,
+  _VERSION = 0.475,
   _COPYRIGHT = "Paul Kulchenko",
   _DESCRIPTION = "Mobile Remote Debugger for the Lua programming language",
   port = 8171
@@ -790,6 +790,7 @@ local function start(controller_host, controller_port)
   end
 end
 
+local coro_debugee
 local function controller(controller_host, controller_port)
   -- only one debugging session can be run (as there is only one debug hook)
   if isrunning() then return end
@@ -814,7 +815,7 @@ local function controller(controller_host, controller_port)
       abort = false
       if skip then skipcount = skip end -- to force suspend right away
 
-      local coro_debugee = coroutine.create(debugee)
+      coro_debugee = coroutine.create(debugee)
       debug.sethook(coro_debugee, debug_hook, "lcr")
       local status, err = coroutine.resume(coro_debugee)
 
@@ -852,6 +853,24 @@ end
 local function loop(controller_host, controller_port)
   skip = nil -- just in case if loop() is called after scratchpad()
   return controller(controller_host, controller_port)
+end
+
+-- store step_into flag to restore between off/on calls
+-- this allows the user to continue between off/on calls
+local step_into_prev
+local function on()
+  if not (isrunning() and server) then return end
+  step_into = step_into_prev
+  if coro_debugee then
+    debug.sethook(coro_debugee, debug_hook, "lcr")
+  else
+    debug.sethook(debug_hook, "lcr")
+  end
+end
+local function off()
+  if not (isrunning() and server) then return end
+  step_into_prev = step_into
+  debug.sethook()
 end
 
 local basedir = ""
@@ -1174,6 +1193,8 @@ mobdebug.scratchpad = scratchpad
 mobdebug.handle = handle
 mobdebug.connect = connect
 mobdebug.start = start
+mobdebug.on = on
+mobdebug.off = off
 mobdebug.line = serpent.line
 mobdebug.dump = serpent.dump
 
