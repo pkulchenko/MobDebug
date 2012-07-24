@@ -1,12 +1,12 @@
 --
--- MobDebug 0.475
+-- MobDebug 0.476
 -- Copyright 2011-12 Paul Kulchenko
 -- Based on RemDebug 1.0 Copyright Kepler Project 2005
 --
 
 local mobdebug = {
   _NAME = "mobdebug",
-  _VERSION = 0.475,
+  _VERSION = 0.476,
   _COPYRIGHT = "Paul Kulchenko",
   _DESCRIPTION = "Mobile Remote Debugger for the Lua programming language",
   port = 8171
@@ -874,6 +874,7 @@ local function off()
 end
 
 local basedir = ""
+local function q(s) return s:gsub('([%(%)%.%%%+%-%*%?%[%^%$%]])','%%%1') end
 
 -- Handles server debugging commands 
 local function handle(params, client)
@@ -920,7 +921,7 @@ local function handle(params, client)
     _, _, _, file, line = string.find(params, "^([a-z]+)%s+([%w%p%s]+)%s+(%d+)%s*$")
     if file and line then
       file = string.gsub(file, "\\", "/") -- convert slash
-      file = string.gsub(file, basedir, '') -- remove basedir
+      file = string.gsub(file, q(basedir), '') -- remove basedir
       if not breakpoints[file] then breakpoints[file] = {} end
       client:send("SETB " .. file .. " " .. line .. "\n")
       if client:receive() == "200 OK" then 
@@ -950,7 +951,7 @@ local function handle(params, client)
     _, _, _, file, line = string.find(params, "^([a-z]+)%s+([%w%p%s]+)%s+(%d+)%s*$")
     if file and line then
       file = string.gsub(file, "\\", "/") -- convert slash
-      file = string.gsub(file, basedir, '') -- remove basedir
+      file = string.gsub(file, q(basedir), '') -- remove basedir
       if not breakpoints[file] then breakpoints[file] = {} end
       client:send("DELB " .. file .. " " .. line .. "\n")
       if client:receive() == "200 OK" then 
@@ -1021,7 +1022,7 @@ local function handle(params, client)
         file:close()
 
         local file = string.gsub(exp, "\\", "/") -- convert slash
-        file = string.gsub(file, basedir, '') -- remove basedir
+        file = string.gsub(file, q(basedir), '') -- remove basedir
         client:send("LOAD " .. string.len(lines) .. " " .. file .. "\n")
         client:send(lines)
       end
@@ -1098,7 +1099,7 @@ local function handle(params, client)
         local src = string.gsub(frame[1][2], "\\", "/") -- convert slash
         if string.find(src, "@") == 1 then src = string.sub(src, 2) end
         if string.find(src, "%./") == 1 then src = string.sub(src, 3) end
-        frame[1][2] = string.gsub(src, basedir, '') -- remove basedir
+        frame[1][2] = string.gsub(src, q(basedir), '') -- remove basedir
         print(serpent.line(frame[1], {comment = false}))
       end
       return stack
