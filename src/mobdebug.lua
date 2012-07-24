@@ -1,12 +1,12 @@
 --
--- MobDebug 0.473
+-- MobDebug 0.474
 -- Copyright 2011-12 Paul Kulchenko
 -- Based on RemDebug 1.0 Copyright Kepler Project 2005
 --
 
 local mobdebug = {
   _NAME = "mobdebug",
-  _VERSION = 0.473,
+  _VERSION = 0.474,
   _COPYRIGHT = "Paul Kulchenko",
   _DESCRIPTION = "Mobile Remote Debugger for the Lua programming language",
   port = 8171
@@ -340,17 +340,32 @@ end
 
 local function restore_vars(vars)
   if type(vars) ~= 'table' then return end
-  local func = debug.getinfo(3, "f").func
+
+  -- locals need to be processed in the reverse order, starting from
+  -- the inner block out, to make sure that the localized variables
+  -- are correctly updated with only the closest variable with
+  -- the same name being changed
+  -- first loop find how many local variables there is, while
+  -- the second loop processes them from i to 1
   local i = 1
-  local written_vars = {}
   while true do
     local name = debug.getlocal(3, i)
     if not name then break end
-    if string.sub(name, 1, 1) ~= '(' then debug.setlocal(3, i, vars[name]) end
-    written_vars[name] = true
     i = i + 1
   end
+  i = i - 1
+  local written_vars = {}
+  while i > 0 do
+    local name = debug.getlocal(3, i)
+    if not written_vars[name] then
+      if string.sub(name, 1, 1) ~= '(' then debug.setlocal(3, i, vars[name]) end
+      written_vars[name] = true
+    end
+    i = i - 1
+  end
+
   i = 1
+  local func = debug.getinfo(3, "f").func
   while true do
     local name = debug.getupvalue(func, i)
     if not name then break end
