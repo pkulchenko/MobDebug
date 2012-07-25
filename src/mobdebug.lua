@@ -1,12 +1,12 @@
 --
--- MobDebug 0.476
+-- MobDebug 0.477
 -- Copyright 2011-12 Paul Kulchenko
 -- Based on RemDebug 1.0 Copyright Kepler Project 2005
 --
 
 local mobdebug = {
   _NAME = "mobdebug",
-  _VERSION = 0.476,
+  _VERSION = 0.477,
   _COPYRIGHT = "Paul Kulchenko",
   _DESCRIPTION = "Mobile Remote Debugger for the Lua programming language",
   port = 8171
@@ -857,10 +857,10 @@ end
 
 -- store step_into flag to restore between off/on calls
 -- this allows the user to continue between off/on calls
-local step_into_prev
+local step_prev
 local function on()
   if not (isrunning() and server) then return end
-  step_into = step_into_prev
+  step_into = step_prev
   if coro_debugee then
     debug.sethook(coro_debugee, debug_hook, "lcr")
   else
@@ -869,7 +869,7 @@ local function on()
 end
 local function off()
   if not (isrunning() and server) then return end
-  step_into_prev = step_into
+  step_prev = step_into or step_over
   debug.sethook()
 end
 
