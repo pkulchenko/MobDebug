@@ -1,12 +1,12 @@
 --
--- MobDebug 0.478
+-- MobDebug 0.479
 -- Copyright 2011-12 Paul Kulchenko
 -- Based on RemDebug 1.0 Copyright Kepler Project 2005
 --
 
 local mobdebug = {
   _NAME = "mobdebug",
-  _VERSION = 0.478,
+  _VERSION = 0.479,
   _COPYRIGHT = "Paul Kulchenko",
   _DESCRIPTION = "Mobile Remote Debugger for the Lua programming language",
   port = 8171
@@ -863,15 +863,8 @@ end
 local coroutines = {}
 setmetatable(coroutines, {__mode = "k"}) -- "weak" keys
 
--- store step_into flag to restore between off/on calls
--- this allows the user to continue between off/on calls
-local step_prev
 local function on()
   if not (isrunning() and server) then return end
-
-  if step_prev == nil then
-    step_into, step_prev = step_prev, nil
-  end
 
   local co = coroutine.running()
   if co then
@@ -891,7 +884,7 @@ end
 
 local function off()
   if not (isrunning() and server) then return end
-  step_prev = step_into or step_over
+
   local co = coroutine.running()
   if co then
     if coroutines[co] then coroutines[co] = false end
@@ -1215,6 +1208,37 @@ local function listen(host, port)
   end
 end
 
+local cocreate
+local function coro()
+  if cocreate then return end -- only set once
+  cocreate = cocreate or coroutine.create
+  coroutine.create = function(f, ...)
+    return cocreate(function(...)
+      require("mobdebug").on()
+      return f(...)
+    end, ...)
+  end
+end
+
+local moconew
+local function moai()
+  if moconew then return end -- only set once
+  moconew = moconew or (MOAICoroutine and MOAICoroutine.new)
+  if not moconew then return end
+  MOAICoroutine.new = function(...)
+    local thread = moconew(...)
+    local mt = getmetatable(thread)
+    local patched = mt.run
+    mt.run = function(self, f, ...)
+      return patched(self,  function(...)
+        require("mobdebug").on()
+        return f(...)
+      end, ...)
+    end
+    return thread
+  end
+end
+
 -- make public functions available
 mobdebug.listen = listen
 mobdebug.loop = loop
@@ -1224,6 +1248,8 @@ mobdebug.connect = connect
 mobdebug.start = start
 mobdebug.on = on
 mobdebug.off = off
+mobdebug.moai = moai
+mobdebug.coro = coro
 mobdebug.line = serpent.line
 mobdebug.dump = serpent.dump
 
