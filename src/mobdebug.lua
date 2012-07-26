@@ -1,12 +1,12 @@
 --
--- MobDebug 0.477
+-- MobDebug 0.478
 -- Copyright 2011-12 Paul Kulchenko
 -- Based on RemDebug 1.0 Copyright Kepler Project 2005
 --
 
 local mobdebug = {
   _NAME = "mobdebug",
-  _VERSION = 0.477,
+  _VERSION = 0.478,
   _COPYRIGHT = "Paul Kulchenko",
   _DESCRIPTION = "Mobile Remote Debugger for the Lua programming language",
   port = 8171
@@ -771,7 +771,12 @@ local function start(controller_host, controller_port)
 
   server = socket.connect(controller_host, controller_port)
   if server then
+    -- check if we are called from the debugger as this may happen
+    -- when another debugger function calls start(); only check one level deep
+    local this = debug.getinfo(1, "S").source
     local info = debug.getinfo(2, "Sl")
+    if info.source == this then info = debug.getinfo(3, "Sl") end
+
     local file = info.source
     if string.find(file, "@") == 1 then file = string.sub(file, 2) end
     if string.find(file, "%.[/\\]") == 1 then file = string.sub(file, 3) end
@@ -855,22 +860,45 @@ local function loop(controller_host, controller_port)
   return controller(controller_host, controller_port)
 end
 
+local coroutines = {}
+setmetatable(coroutines, {__mode = "k"}) -- "weak" keys
+
 -- store step_into flag to restore between off/on calls
 -- this allows the user to continue between off/on calls
 local step_prev
 local function on()
   if not (isrunning() and server) then return end
-  step_into = step_prev
-  if coro_debugee then
-    debug.sethook(coro_debugee, debug_hook, "lcr")
+
+  if step_prev == nil then
+    step_into, step_prev = step_prev, nil
+  end
+
+  local co = coroutine.running()
+  if co then
+    if not coroutines[co] then
+      coroutines[co] = true
+      debug.sethook(co, debug_hook, "lcr")
+    end
   else
-    debug.sethook(debug_hook, "lcr")
+    -- restore hook for the main module
+    if coro_debugee then
+      debug.sethook(coro_debugee, debug_hook, "lcr")
+    else
+      debug.sethook(debug_hook, "lcr")
+    end
   end
 end
+
 local function off()
   if not (isrunning() and server) then return end
   step_prev = step_into or step_over
-  debug.sethook()
+  local co = coroutine.running()
+  if co then
+    if coroutines[co] then coroutines[co] = false end
+    debug.sethook(co)
+  else
+    debug.sethook()
+  end
 end
 
 local basedir = ""
