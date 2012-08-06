@@ -1,22 +1,24 @@
 MobDebug is a remote debugger for Lua.
 
-MobDebug lets you control the execution of another Lua program remotely,
+MobDebug allows you control the execution of another Lua program remotely,
 set breakpoints, and inspect the current state of the program.
 
 MobDebug is based on RemDebug (http://www.keplerproject.org/remdebug/) and
 extends it in several ways:
 
-1. fixed several existing bugs
-2. added new commands: LOAD, RELOAD, OUT
+1. fixed several existing bugs;
+2. added new commands: LOAD, RELOAD, OUT, STACK;
 3. added support for MoSync clients (http://mosync.com/) using
-   MobileLua (https://github.com/divineprog/mobilelua)
-4. added support for debugging wxwidgets applications
+   MobileLua (https://github.com/divineprog/mobilelua);
+4. added support for debugging wxwidgets applications;
 5. tested integration with ZeroBrane Studio IDE and Estrela editor
-   (https://github.com/pkulchenko/ZeroBraneStudio)
-6. removed dependency on LuaFileSystem
-7. added ability to pause and abort running applications
-8. added pretty printing and handling of multiple results in EXEC
-9. added stack and local/upvalue value reporting (STACK)
+   (https://github.com/pkulchenko/ZeroBraneStudio);
+6. removed dependency on LuaFileSystem;
+7. added ability to pause and abort running applications;
+8. added pretty printing and handling of multiple results in EXEC;
+9. added stack and local/upvalue value reporting (STACK);
+a. added on/off commands to turn debugging on and off (to improve performance);
+b. added support for coroutine debugging (see examples/README for details).
 
 INSTALLATION
 
@@ -36,6 +38,16 @@ LICENSE
 See LICENSE file
 
 HISTORY 
+
+Aug 05 2012 v0.48
+  - Added support for coroutine debugging. Added methods (coro/moai) to
+    support coroutine debugging without adding 'on()' calls to all coroutines.
+  - Added on/off methods to turn debugging on and off (to improve performance).
+  - Fixed an issue with localized variables not being properly restored
+    if there are multiple variables with the same name in the environment.
+  - Added restoring variables between stack calls to make them reflect changes
+    that can be caused by EXEC/EVAL commands.
+  - Fixed compilation errors on scripts with a shebang line.
 
 Jun 28 2012 v0.47
   - Added special handling to debug clients running under LuaJIT.
