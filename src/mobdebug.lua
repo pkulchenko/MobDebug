@@ -1,12 +1,12 @@
 --
--- MobDebug 0.481
+-- MobDebug 0.482
 -- Copyright 2011-12 Paul Kulchenko
 -- Based on RemDebug 1.0 Copyright Kepler Project 2005
 --
 
 local mobdebug = {
   _NAME = "mobdebug",
-  _VERSION = 0.481,
+  _VERSION = 0.482,
   _COPYRIGHT = "Paul Kulchenko",
   _DESCRIPTION = "Mobile Remote Debugger for the Lua programming language",
   port = 8171
@@ -503,7 +503,10 @@ local function debug_hook(event, line)
     if step_into
     or (step_over and stack_level <= step_level)
     or has_breakpoint(file, line)
-    or (socket.select({server}, {}, 0))[server] then
+    -- don't break on select() unless this hook has already been visited for
+    -- any other reason. this check is needed to avoid stepping in too early
+    -- (for example, when coroutine.resume() is executed inside start()).
+    or (seen_hook and (socket.select({server}, {}, 0))[server]) then
       vars = vars or capture_vars()
       seen_hook = true
       step_into = false
@@ -792,8 +795,8 @@ local function start(controller_host, controller_port)
     -- start from 16th frame, which is sufficiently large for this check.
     stack_level = stack_depth(16)
 
-    debug.sethook(debug_hook, "lcr")
     coro_debugger = coroutine.create(debugger_loop)
+    debug.sethook(debug_hook, "lcr")
     return coroutine.resume(coro_debugger, file, info.currentline)
   else
     print("Could not connect to " .. controller_host .. ":" .. controller_port)
