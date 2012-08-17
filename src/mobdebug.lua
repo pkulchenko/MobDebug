@@ -1,12 +1,12 @@
 --
--- MobDebug 0.484
+-- MobDebug 0.485
 -- Copyright 2011-12 Paul Kulchenko
 -- Based on RemDebug 1.0 Copyright Kepler Project 2005
 --
 
 local mobdebug = {
   _NAME = "mobdebug",
-  _VERSION = 0.484,
+  _VERSION = 0.485,
   _COPYRIGHT = "Paul Kulchenko",
   _DESCRIPTION = "Mobile Remote Debugger for the Lua programming language",
   port = 8171
@@ -591,7 +591,7 @@ local function debugger_loop(sfile, sline)
     if server.settimeout then server:settimeout() end -- back to blocking
     command = string.sub(line, string.find(line, "^[A-Z]+"))
     if command == "SETB" then
-      local _, _, _, file, line = string.find(line, "^([A-Z]+)%s+([%w%p%s]+)%s+(%d+)%s*$")
+      local _, _, _, file, line = string.find(line, "^([A-Z]+)%s+(.-)%s+(%d+)%s*$")
       if file and line then
         set_breakpoint(file, tonumber(line))
         server:send("200 OK\n")
@@ -599,7 +599,7 @@ local function debugger_loop(sfile, sline)
         server:send("400 Bad Request\n")
       end
     elseif command == "DELB" then
-      local _, _, _, file, line = string.find(line, "^([A-Z]+)%s+([%w%p%s]+)%s+(%d+)%s*$")
+      local _, _, _, file, line = string.find(line, "^([A-Z]+)%s+(.-)%s+(%d+)%s*$")
       if file and line then
         remove_breakpoint(file, tonumber(line))
         server:send("200 OK\n")
@@ -626,7 +626,7 @@ local function debugger_loop(sfile, sline)
         server:send("400 Bad Request\n")
       end
     elseif command == "LOAD" then
-      local _, _, size, name = string.find(line, "^[A-Z]+%s+(%d+)%s+([%w%p%s]*[%w%p]+)%s*$")
+      local _, _, size, name = string.find(line, "^[A-Z]+%s+(%d+)%s+(%S.-)%s*$")
       size = tonumber(size)
 
       if abort == nil then -- no LOAD/RELOAD allowed inside start()
@@ -831,7 +831,7 @@ local function controller(controller_host, controller_port)
 
     coro_debugger = coroutine.create(debugger_loop)
 
-    while true do 
+    while true do
       step_into = true
       abort = false
       if skip then skipcount = skip end -- to force suspend right away
@@ -930,12 +930,12 @@ local function handle(params, client)
     if status == "200" then
       -- don't need to do anything
     elseif status == "202" then
-      _, _, file, line = string.find(breakpoint, "^202 Paused%s+([%w%p%s]+)%s+(%d+)%s*$")
+      _, _, file, line = string.find(breakpoint, "^202 Paused%s+(.-)%s+(%d+)%s*$")
       if file and line then 
         print("Paused at file " .. file .. " line " .. line)
       end
     elseif status == "203" then
-      _, _, file, line, watch_idx = string.find(breakpoint, "^203 Paused%s+([%w%p%s]+)%s+(%d+)%s+(%d+)%s*$")
+      _, _, file, line, watch_idx = string.find(breakpoint, "^203 Paused%s+(.-)%s+(%d+)%s+(%d+)%s*$")
       if file and line and watch_idx then
         print("Paused at file " .. file .. " line " .. line .. " (watch expression " .. watch_idx .. ": [" .. watches[watch_idx] .. "])")
       end
@@ -954,7 +954,7 @@ local function handle(params, client)
       return nil, nil, "Debugger error: unexpected response '" .. breakpoint .. "'"
     end
   elseif command == "setb" then
-    _, _, _, file, line = string.find(params, "^([a-z]+)%s+([%w%p%s]+)%s+(%d+)%s*$")
+    _, _, _, file, line = string.find(params, "^([a-z]+)%s+(.-)%s+(%d+)%s*$")
     if file and line then
       file = string.gsub(file, "\\", "/") -- convert slash
       file = string.gsub(file, q(basedir), '') -- remove basedir
@@ -990,7 +990,7 @@ local function handle(params, client)
       print("Invalid command")
     end
   elseif command == "delb" then
-    _, _, _, file, line = string.find(params, "^([a-z]+)%s+([%w%p%s]+)%s+(%d+)%s*$")
+    _, _, _, file, line = string.find(params, "^([a-z]+)%s+(.-)%s+(%d+)%s*$")
     if file and line then
       file = string.gsub(file, "\\", "/") -- convert slash
       file = string.gsub(file, q(basedir), '') -- remove basedir
@@ -1078,7 +1078,7 @@ local function handle(params, client)
       if not params then
         return nil, nil, "Debugger error: missing response after EXEC/LOAD"
       end
-      local _, _, status, len = string.find(params, "^(%d+)[%w%p%s]+%s+(%d+)%s*$")
+      local _, _, status, len = string.find(params, "^(%d+).-%s+(%d+)%s*$")
       if status == "200" then
         len = tonumber(len)
         if len > 0 then 
@@ -1101,7 +1101,7 @@ local function handle(params, client)
           return res[1], res
         end
       elseif status == "201" then
-        _, _, file, line = string.find(params, "^201 Started%s+([%w%p%s]+)%s+(%d+)%s*$")
+        _, _, file, line = string.find(params, "^201 Started%s+(.-)%s+(%d+)%s*$")
       elseif status == "202" or params == "200 OK" then
         -- do nothing; this only happens when RE/LOAD command gets the response
         -- that was for the original command that was aborted
@@ -1216,7 +1216,7 @@ local function listen(host, port)
   client:receive()
 
   local breakpoint = client:receive()
-  local _, _, file, line = string.find(breakpoint, "^202 Paused%s+([%w%p%s]+)%s+(%d+)%s*$")
+  local _, _, file, line = string.find(breakpoint, "^202 Paused%s+(.-)%s+(%d+)%s*$")
   if file and line then
     print("Paused at file " .. file )
     print("Type 'help' for commands")
