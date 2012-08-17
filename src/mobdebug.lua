@@ -1,12 +1,12 @@
 --
--- MobDebug 0.483
+-- MobDebug 0.484
 -- Copyright 2011-12 Paul Kulchenko
 -- Based on RemDebug 1.0 Copyright Kepler Project 2005
 --
 
 local mobdebug = {
   _NAME = "mobdebug",
-  _VERSION = 0.483,
+  _VERSION = 0.484,
   _COPYRIGHT = "Paul Kulchenko",
   _DESCRIPTION = "Mobile Remote Debugger for the Lua programming language",
   port = 8171
@@ -1058,7 +1058,13 @@ local function handle(params, client)
         client:send(lines)
       else
         local file = io.open(exp, "r")
-        if not file then print("Cannot open file " .. exp); return end
+        if not file and pcall(require, "winapi") then
+          -- if file is not open and winapi is there, try with a short path;
+          -- this may be needed for unicode paths on windows
+          winapi.set_encoding(winapi.CP_UTF8)
+          file = io.open(winapi.short_path(exp), "r")
+        end
+        if not file then error("Cannot open file " .. exp) end
         -- read the file and remove the shebang line as it causes a compilation error
         local lines = file:read("*all"):gsub("^#!.-\n", "\n")
         file:close()
