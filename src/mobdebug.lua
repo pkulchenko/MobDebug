@@ -1,12 +1,12 @@
 --
--- MobDebug 0.487
+-- MobDebug 0.488
 -- Copyright 2011-12 Paul Kulchenko
 -- Based on RemDebug 1.0 Copyright Kepler Project 2005
 --
 
 local mobdebug = {
   _NAME = "mobdebug",
-  _VERSION = 0.487,
+  _VERSION = 0.488,
   _COPYRIGHT = "Paul Kulchenko",
   _DESCRIPTION = "Mobile Remote Debugger for the Lua programming language",
   port = 8171
@@ -574,7 +574,8 @@ local function debugger_loop(sfile, sline)
         app = app or (wx and wx.wxGetApp and wx.wxGetApp())
         if app then
           local win = app:GetTopWindow()
-          if win then
+          local inloop = app:IsMainLoopRunning()
+          if win and not inloop then
             -- process messages in a regular way
             -- and exit as soon as the event loop is idle
             win:Connect(wx.wxEVT_IDLE, function()
