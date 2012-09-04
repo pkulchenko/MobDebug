@@ -39,7 +39,16 @@ See LICENSE file
 
 HISTORY 
 
-Aug 05 2012 v0.48
+v0.49 (Sep 03 2012)
+  - Added support for unicode names in load and breakpoint commands.
+  - Added conversion to short path for unicode names on windows.
+  - Added handling of exit/load/reload commands after watch condition is fired.
+  - Added support for moai breakpoints and callback debugging.
+  - Fixed an issue of starting debugging too early in some cases using start().
+  - Fixed an issue with coroutine debugging.
+  - Fixed an issue with yielding to wxwidgets apps while running main loop.
+
+v0.48 (Aug 05 2012)
   - Added support for coroutine debugging. Added methods (coro/moai) to
     support coroutine debugging without adding 'on()' calls to all coroutines.
   - Added on/off methods to turn debugging on and off (to improve performance).
@@ -49,7 +58,7 @@ Aug 05 2012 v0.48
     that can be caused by EXEC/EVAL commands.
   - Fixed compilation errors on scripts with a shebang line.
 
-Jun 28 2012 v0.47
+v0.47 (Jun 28 2012)
   - Added special handling to debug clients running under LuaJIT.
   - Fixed an issue when a remote client could not suspend/exit.
   - Added default configuration for start/loop/listen methods.
@@ -58,12 +67,12 @@ Jun 28 2012 v0.47
   - Fixed incorrect initial stack level when started with start() command.
   - Added short_src field to the reported stack data.
 
-Jun 19 2012 v0.46
+v0.46 (Jun 19 2012)
   - Added reporting of stack and variable (local/upvalue) information.
   - Added support for multiple results returned by EXEC/EVAL commands.
   - Added serialization/pretty-printing of results from EXEC/EVAL.
 
-May 28 2012 v0.45
+v0.45 (May 28 2012)
   - Added select() implementation to mosync client to abort/break a running
     mosync app.
   - Added support for scratchpad.
@@ -82,21 +91,21 @@ May 28 2012 v0.45
   - Fixed an issue with local variables not being updated after EXEC/EVAL
     commands.
 
-Mar 20 2012 v0.44
+v0.44 (Mar 20 2012)
   - Updated to work with "mosync" namespace (MobileLua 20120319 and MoSync 3.0).
   - Removed the use of "module()".
 
-Jan 16 2012 v0.43
+v0.43 (Jan 16 2012)
   - Fixed errors from LOAD/RELOAD commands when used with start() method.
   - Added reporting of a file name and a line number to properly display
     source code when attach to a debugger.
 
-Dec 30 2011 v0.42
+v0.42 (Dec 30 2011)
   - Added support for debugging of wxwidgets applications.
   - Added ability to break an application being debugged; this requires
     socket.select and async processing (doesn't work from the command line).
 
-Dec 17 2011 v0.41
+v0.41 (Dec 17 2011)
   - Added slash conversion in filenames to make breakpoints work regardless
     of how slashes are specified in file names and in setb/delb commands.
   - Added tests with breakpoints in files in subfolders.
@@ -107,5 +116,5 @@ Dec 17 2011 v0.41
   - Allowed 'setb' and 'delb' commands to accept '-' as the filename.
     The last referenced (checked/stopped at/etc.) filename is used.
 
-Dec 02 2011 v0.40
+v0.40 (Dec 02 2011)
   - First public release.
