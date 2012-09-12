@@ -1,12 +1,12 @@
 --
--- MobDebug 0.491
+-- MobDebug 0.492
 -- Copyright 2011-12 Paul Kulchenko
 -- Based on RemDebug 1.0 Copyright Kepler Project 2005
 --
 
 local mobdebug = {
   _NAME = "mobdebug",
-  _VERSION = 0.491,
+  _VERSION = 0.492,
   _COPYRIGHT = "Paul Kulchenko",
   _DESCRIPTION = "Mobile Remote Debugger for the Lua programming language",
   port = 8171
@@ -190,7 +190,7 @@ local debugee = function ()
 end
 
 local serpent = (function() ---- include Serpent module for serialization
-local n, v = "serpent", 0.16 -- (C) 2012 Paul Kulchenko; MIT License
+local n, v = "serpent", 0.17 -- (C) 2012 Paul Kulchenko; MIT License
 local c, d = "Paul Kulchenko", "Serializer and pretty printer of Lua data types"
 local snum = {[tostring(1/0)]='1/0 --[[math.huge]]',[tostring(-1/0)]='-1/0 --[[-math.huge]]',[tostring(0/0)]='0/0'}
 local badtype = {thread = true, userdata = true}
@@ -215,7 +215,7 @@ local function s(t, opts)
     or ("%q"):format(s):gsub("\010","n"):gsub("\026","\\026") end
   local function comment(s,l) return comm and (l or 0) < comm and ' --[['..tostring(s)..']]' or '' end
   local function globerr(s,l) return globals[s] and globals[s]..comment(s,l) or not fatal
-    and safestr(tostring(s)) or error("Can't serialize "..tostring(s)) end
+    and safestr(select(2, pcall(tostring, s))) or error("Can't serialize "..tostring(s)) end
   local function safename(path, name) -- generates foo.bar, foo[3], or foo['b a r']
     local n = name == nil and '' or name
     local plain = type(n) == "string" and n:match("^[%l%u_][%w_]*$") and not keyword[n]
