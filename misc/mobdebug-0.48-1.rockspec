@@ -3,7 +3,7 @@ version = "0.48-1"
 
 source = {
    url = "git://github.com/pkulchenko/MobDebug.git",
-   branch = "master"
+   tag = "0.48"
 }
 
 description = {
