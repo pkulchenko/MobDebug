@@ -1,12 +1,12 @@
 --
--- MobDebug 0.492
+-- MobDebug 0.493
 -- Copyright 2011-12 Paul Kulchenko
 -- Based on RemDebug 1.0 Copyright Kepler Project 2005
 --
 
 local mobdebug = {
   _NAME = "mobdebug",
-  _VERSION = 0.492,
+  _VERSION = 0.493,
   _COPYRIGHT = "Paul Kulchenko",
   _DESCRIPTION = "Mobile Remote Debugger for the Lua programming language",
   port = 8171
@@ -190,7 +190,7 @@ local debugee = function ()
 end
 
 local serpent = (function() ---- include Serpent module for serialization
-local n, v = "serpent", 0.17 -- (C) 2012 Paul Kulchenko; MIT License
+local n, v = "serpent", 0.18 -- (C) 2012 Paul Kulchenko; MIT License
 local c, d = "Paul Kulchenko", "Serializer and pretty printer of Lua data types"
 local snum = {[tostring(1/0)]='1/0 --[[math.huge]]',[tostring(-1/0)]='-1/0 --[[-math.huge]]',[tostring(0/0)]='0/0'}
 local badtype = {thread = true, userdata = true}
@@ -208,8 +208,8 @@ local function s(t, opts)
   local space, maxl = (opts.compact and '' or ' '), (opts.maxlevel or math.huge)
   local comm = opts.comment and (tonumber(opts.comment) or math.huge)
   local seen, sref, syms, symn = {}, {}, {}, 0
-  local function gensym(val) return tostring(val):gsub("[^%w]",""):gsub("(%d%w+)",
-    function(s) if not syms[s] then symn = symn+1; syms[s] = symn end return syms[s] end) end
+  local function gensym(val) return (tostring(val):gsub("[^%w]",""):gsub("(%d%w+)",
+    function(s) if not syms[s] then symn = symn+1; syms[s] = symn end return syms[s] end)) end
   local function safestr(s) return type(s) == "number" and (huge and snum[tostring(s)] or s)
     or type(s) ~= "string" and tostring(s) -- escape NEWLINE/010 and EOF/026
     or ("%q"):format(s):gsub("\010","n"):gsub("\026","\\026") end
@@ -227,16 +227,19 @@ local function s(t, opts)
     table.sort(o, function(a,b)
       return (o[a] and 0 or to[type(a)] or 'z')..(tostring(a):gsub("%d+",padnum))
            < (o[b] and 0 or to[type(b)] or 'z')..(tostring(b):gsub("%d+",padnum)) end) end
-  local function val2str(t, name, indent, path, plainindex, level)
+  local function val2str(t, name, indent, insref, path, plainindex, level)
     local ttype, level = type(t), (level or 0)
     local spath, sname = safename(path, name)
     local tag = plainindex and
       ((type(name) == "number") and '' or name..space..'='..space) or
       (name ~= nil and sname..space..'='..space or '')
-    if seen[t] then
+    if seen[t] then -- if already seen and in sref processing,
+      if insref then return tag..seen[t] end -- then emit right away
       table.insert(sref, spath..space..'='..space..seen[t])
       return tag..'nil'..comment('ref', level)
-    elseif badtype[ttype] then return tag..globerr(t, level)
+    elseif badtype[ttype] then
+      seen[t] = spath
+      return tag..globerr(t, level)
     elseif ttype == 'function' then
       seen[t] = spath
       local ok, res = pcall(string.dump, t)
@@ -245,7 +248,7 @@ local function s(t, opts)
       return tag..(func or globerr(t, level))
     elseif ttype == "table" then
       if level >= maxl then return tag..'{}'..comment('max', level) end
-      seen[t] = spath
+      seen[t] = insref or spath -- set path to use as reference
       if next(t) == nil then return tag..'{}'..comment(t, level) end -- table empty
       local maxn, o, out = #t, {}, {}
       for key = 1, maxn do table.insert(o, key) end
@@ -255,14 +258,15 @@ local function s(t, opts)
         local value, ktype, plainindex = t[key], type(key), n <= maxn and not sparse
         if opts.ignore and opts.ignore[value] -- skip ignored values; do nothing
         or sparse and value == nil then -- skipping nils; do nothing
-        elseif ktype == 'table' or ktype == 'function' then
+        elseif ktype == 'table' or ktype == 'function' or badtype[ktype] then
           if not seen[key] and not globals[key] then
-            table.insert(sref, 'local '..val2str(key,gensym(key),indent)) end
-          table.insert(sref, seen[t]..'['..(seen[key] or globals[key] or gensym(key))
-            ..']'..space..'='..space..(seen[value] or val2str(value,nil,indent)))
+            table.insert(sref, 'placeholder')
+            sref[#sref] = 'local '..val2str(key,gensym(key),indent,gensym(key)) end
+          table.insert(sref, 'placeholder')
+          local path = seen[t]..'['..(seen[key] or globals[key] or gensym(key))..']'
+          sref[#sref] = path..space..'='..space..(seen[value] or val2str(value,nil,indent,path))
         else
-          if badtype[ktype] then plainindex, key = true, '['..globerr(key, level+1)..']' end
-          table.insert(out,val2str(value,key,indent,spath,plainindex,level+1))
+          table.insert(out,val2str(value,key,indent,insref,seen[t],plainindex,level+1))
         end
       end
       local prefix = string.rep(indent or '', level)
