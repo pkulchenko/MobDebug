@@ -1,12 +1,12 @@
 --
--- MobDebug 0.493
+-- MobDebug 0.494
 -- Copyright 2011-12 Paul Kulchenko
 -- Based on RemDebug 1.0 Copyright Kepler Project 2005
 --
 
 local mobdebug = {
   _NAME = "mobdebug",
-  _VERSION = 0.493,
+  _VERSION = 0.494,
   _COPYRIGHT = "Paul Kulchenko",
   _DESCRIPTION = "Mobile Remote Debugger for the Lua programming language",
   port = 8171
@@ -1162,7 +1162,11 @@ local function handle(params, client)
         print("Error in stack information: " .. err)
         return nil, nil, err
       end
-      local stack = func()
+      local ok, stack = pcall(func)
+      if not ok then
+        print("Error in stack information: " .. stack)
+        return nil, nil, stack
+      end
       for _,frame in ipairs(stack) do
         -- remove basedir from short_src or source
         local src = string.gsub(frame[1][2], "\\", "/") -- convert slash
