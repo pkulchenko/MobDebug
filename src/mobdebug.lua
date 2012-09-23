@@ -1,12 +1,12 @@
 --
--- MobDebug 0.494
+-- MobDebug 0.495
 -- Copyright 2011-12 Paul Kulchenko
 -- Based on RemDebug 1.0 Copyright Kepler Project 2005
 --
 
 local mobdebug = {
   _NAME = "mobdebug",
-  _VERSION = 0.494,
+  _VERSION = 0.495,
   _COPYRIGHT = "Paul Kulchenko",
   _DESCRIPTION = "Mobile Remote Debugger for the Lua programming language",
   port = 8171
@@ -25,7 +25,6 @@ local string = string
 local tonumber = tonumber
 local mosync = mosync
 local jit = jit
-local moai = MOAISim
 
 -- this is a socket class that implements maConnect interface
 local function socketMobileLua() 
@@ -339,22 +338,8 @@ local function remove_breakpoint(file, line)
   end
 end
 
--- moai host uses full path in source files whereas the standard lua
--- interpreter uses relative paths this debugger relies on.
--- to check if there is a breakpoint, do a string search (from the end)
--- to find a potentially matching breakpoint.
--- may have false positives, but good enough as only affects moai debugging.
-local function has_breakpoint_moai(file, line)
-  for fname, lines in pairs(breakpoints) do
-    if #file > #fname and file:find('/'..fname, -#fname-1, true)
-    and lines[line] then return true end
-  end
-  return false
-end
-
 local function has_breakpoint(file, line)
   return breakpoints[file] and breakpoints[file][line]
-    or moai and has_breakpoint_moai(file, line)
 end
 
 local function restore_vars(vars)
