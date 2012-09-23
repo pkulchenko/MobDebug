@@ -1,12 +1,12 @@
 --
--- MobDebug 0.495
+-- MobDebug 0.496
 -- Copyright 2011-12 Paul Kulchenko
 -- Based on RemDebug 1.0 Copyright Kepler Project 2005
 --
 
 local mobdebug = {
   _NAME = "mobdebug",
-  _VERSION = 0.495,
+  _VERSION = 0.496,
   _COPYRIGHT = "Paul Kulchenko",
   _DESCRIPTION = "Mobile Remote Debugger for the Lua programming language",
   port = 8171
@@ -25,6 +25,9 @@ local string = string
 local tonumber = tonumber
 local mosync = mosync
 local jit = jit
+local iswindows = os.getenv('WINDIR')
+  or (os.getenv('OS') or ''):match('[Ww]indows')
+  or pcall(require, "winapi")
 
 -- this is a socket class that implements maConnect interface
 local function socketMobileLua() 
@@ -323,21 +326,24 @@ local function stack(start)
   return stack
 end
 
+-- convert file names to lower case on windows (its file system is case
+-- insensitive, but case preserving), as setting breakpoint on
+-- x:\Foo.lua will not work if the file was loaded as X:\foo.lua.
+
 local function set_breakpoint(file, line)
   if file == '-' and lastfile then file = lastfile end
-  if not breakpoints[file] then
-    breakpoints[file] = {}
-  end
+  if iswindows then file = string.lower(file) end
+  if not breakpoints[file] then breakpoints[file] = {} end
   breakpoints[file][line] = true  
 end
 
 local function remove_breakpoint(file, line)
   if file == '-' and lastfile then file = lastfile end
-  if breakpoints[file] then
-    breakpoints[file][line] = nil
-  end
+  if iswindows then file = string.lower(file) end
+  if breakpoints[file] then breakpoints[file][line] = nil end
 end
 
+-- this file name is already converted to lower case on windows.
 local function has_breakpoint(file, line)
   return breakpoints[file] and breakpoints[file][line]
 end
@@ -492,6 +498,7 @@ local function debug_hook(event, line)
         file = string.sub(string.gsub(file, "\n", ' '), 1, 32) -- limit to 32 chars
       end
       file = string.gsub(file, "\\", "/") -- convert slash
+      if iswindows then file = string.lower(file) end
       lastfile = file
     end
 
