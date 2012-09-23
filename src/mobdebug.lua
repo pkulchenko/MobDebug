@@ -1,12 +1,12 @@
 --
--- MobDebug 0.496
+-- MobDebug 0.497
 -- Copyright 2011-12 Paul Kulchenko
 -- Based on RemDebug 1.0 Copyright Kepler Project 2005
 --
 
 local mobdebug = {
   _NAME = "mobdebug",
-  _VERSION = 0.496,
+  _VERSION = 0.497,
   _COPYRIGHT = "Paul Kulchenko",
   _DESCRIPTION = "Mobile Remote Debugger for the Lua programming language",
   port = 8171
@@ -184,6 +184,7 @@ local step_over = false
 local step_level = 0
 local stack_level = 0
 local server
+local rset
 local deferror = "execution aborted at default debugee"
 local debugee = function () 
   local a = 1
@@ -499,6 +500,10 @@ local function debug_hook(event, line)
       end
       file = string.gsub(file, "\\", "/") -- convert slash
       if iswindows then file = string.lower(file) end
+
+      -- set to true if we got here; this only needs to be done once per
+      -- session, so do it here to at least avoid setting it for every line.
+      seen_hook = true
       lastfile = file
     end
 
@@ -521,11 +526,10 @@ local function debug_hook(event, line)
       (step_into
       or (step_over and stack_level <= step_level)
       or has_breakpoint(file, line)
-      or (socket.select({server}, {}, 0))[server])
+      or (socket.select(rset, nil, 0))[server])
 
     if getin then
       vars = vars or capture_vars()
-      seen_hook = true
       step_into = false
       step_over = false
       status, res = coroutine.resume(coro_debugger, events.BREAK, vars, file, line)
@@ -804,6 +808,7 @@ local function start(controller_host, controller_port)
 
   server = socket.connect(controller_host, controller_port)
   if server then
+    rset = {server} -- store hash to avoid recreating it later
     -- check if we are called from the debugger as this may happen
     -- when another debugger function calls start(); only check one level deep
     local this = debug.getinfo(1, "S").source
@@ -839,6 +844,8 @@ local function controller(controller_host, controller_port)
   local exitonerror = not skip -- exit if not running a scratchpad
   server = socket.connect(controller_host, controller_port)
   if server then
+    rset = {server} -- store hash to avoid recreating it later
+
     local function report(trace, err)
       local msg = err .. "\n" .. trace
       server:send("401 Error in Execution " .. string.len(msg) .. "\n")
