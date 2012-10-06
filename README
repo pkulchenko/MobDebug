@@ -3,22 +3,21 @@ MobDebug is a remote debugger for Lua.
 MobDebug allows you control the execution of another Lua program remotely,
 set breakpoints, and inspect the current state of the program.
 
-MobDebug is based on RemDebug (http://www.keplerproject.org/remdebug/) and
+MobDebug is based on [RemDebug](http://www.keplerproject.org/remdebug/) and
 extends it in several ways:
 
 1. fixed several existing bugs;
 2. added new commands: LOAD, RELOAD, OUT, STACK;
-3. added support for MoSync clients (http://mosync.com/) using
-   MobileLua (https://github.com/divineprog/mobilelua);
+3. added support for [MoSync](http://mosync.com/) using [MobileLua](https://github.com/divineprog/mobilelua);
 4. added support for debugging wxwidgets applications;
-5. tested integration with ZeroBrane Studio IDE and Estrela editor
-   (https://github.com/pkulchenko/ZeroBraneStudio);
+5. tested integration with [ZeroBrane Studio IDE](http://studio.zerobrane.com/);
 6. removed dependency on LuaFileSystem;
 7. added ability to pause and abort running applications;
 8. added pretty printing and handling of multiple results in EXEC;
 9. added stack and local/upvalue value reporting (STACK);
 a. added on/off commands to turn debugging on and off (to improve performance);
-b. added support for coroutine debugging (see examples/README for details).
+b. added support for coroutine debugging (see examples/README for details);
+c. added support for [Moai](http://getmoai.com/) debugging.
 
 INSTALLATION
 
@@ -38,6 +37,17 @@ LICENSE
 See LICENSE file
 
 HISTORY 
+
+v0.50 (Oct 05 2012)
+  - Improved path matching when absolute and relative paths are used.
+  - Improved performance; thanks to Stephen Nichols for profiling and
+    detailed suggestions.
+  - Added conversion of file names on Windows to lower case to make
+    x:\Foo and X:\foo to match in breakpoint checks.
+  - Added reporting errors in deserializing stack data.
+  - Fixed an issue with returning stack values with circular references.
+  - Fixed serialization of usedata values that don't provide tostring().
+  - Fixed an issue with wx IDLE event on Linux.
 
 v0.49 (Sep 03 2012)
   - Added support for unicode names in load and breakpoint commands.

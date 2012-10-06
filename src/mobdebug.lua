@@ -1,12 +1,12 @@
 --
--- MobDebug 0.498
+-- MobDebug 0.50
 -- Copyright 2011-12 Paul Kulchenko
 -- Based on RemDebug 1.0 Copyright Kepler Project 2005
 --
 
 local mobdebug = {
   _NAME = "mobdebug",
-  _VERSION = 0.498,
+  _VERSION = 0.50,
   _COPYRIGHT = "Paul Kulchenko",
   _DESCRIPTION = "Mobile Remote Debugger for the Lua programming language",
   port = 8171
