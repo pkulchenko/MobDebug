@@ -1,12 +1,12 @@
 --
--- MobDebug 0.501
+-- MobDebug 0.502
 -- Copyright 2011-12 Paul Kulchenko
 -- Based on RemDebug 1.0 Copyright Kepler Project 2005
 --
 
 local mobdebug = {
   _NAME = "mobdebug",
-  _VERSION = 0.501,
+  _VERSION = 0.502,
   _COPYRIGHT = "Paul Kulchenko",
   _DESCRIPTION = "Mobile Remote Debugger for the Lua programming language",
   port = 8171
@@ -178,6 +178,12 @@ end
 if mosync and mosync.EventMonitor then
   mosync.EventMonitor.RunEventLoop = function(self) end
 end
+
+-- turn jit off based on Mike Pall's comment in this discussion:
+-- http://www.freelists.org/post/luajit/Debug-hooks-and-JIT,2
+-- "You need to turn it off at the start if you plan to receive
+-- reliable hook calls at any later point in time."
+if jit and jit.off then jit.off() end
 
 local socket = mosync and socketMobileLua() or (require "socket")
 
