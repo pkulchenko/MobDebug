@@ -1,15 +1,16 @@
 --
--- MobDebug 0.507
+-- MobDebug 0.508
 -- Copyright 2011-12 Paul Kulchenko
 -- Based on RemDebug 1.0 Copyright Kepler Project 2005
 --
 
 local mobdebug = {
   _NAME = "mobdebug",
-  _VERSION = 0.507,
+  _VERSION = 0.508,
   _COPYRIGHT = "Paul Kulchenko",
   _DESCRIPTION = "Mobile Remote Debugger for the Lua programming language",
-  port = os and os.getenv and os.getenv("MOBDEBUG_PORT") or 8172
+  port = os and os.getenv and os.getenv("MOBDEBUG_PORT") or 8172,
+  yieldtimeout = 0.02,
 }
 
 local coroutine = coroutine
@@ -603,7 +604,7 @@ local function debugger_loop(sfile, sline)
   while true do
     local line, err
     local wx = rawget(genv, "wx") -- use rawread to make strict.lua happy
-    if wx and server.settimeout then server:settimeout(0.1) end
+    if (wx or mobdebug.yield) and server.settimeout then server:settimeout(mobdebug.yieldtimeout) end
     while true do
       line, err = server:receive()
       if not line and err == "timeout" then
@@ -626,6 +627,7 @@ local function debugger_loop(sfile, sline)
             win:Connect(wx.wxEVT_TIMER, exitLoop)
             app:MainLoop()
           end
+        elseif mobdebug.yield then mobdebug.yield()
         end
       else
         break
@@ -1412,6 +1414,7 @@ mobdebug.moai = moai
 mobdebug.coro = coro
 mobdebug.line = serpent.line
 mobdebug.dump = serpent.dump
+mobdebug.yield = nil -- callback
 
 -- this is needed to make "require 'modebug'" to work when mobdebug
 -- module is loaded manually
