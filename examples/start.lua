@@ -1,4 +1,4 @@
-require("mobdebug").start() -- same as start("localhost", 8171)
+require("mobdebug").start() -- same as start("localhost", 8172)
 
 print("Start")
 local foo = 0

@@ -38,6 +38,19 @@ See LICENSE file
 
 HISTORY 
 
+v0.51 (Dec 13 2012)
+  - Added yield callback to customize event loop call during debugging.
+  - Added custom error handler for start() call to report errors remotely.
+  - Added serialization of remote 'print' results.
+  - Added 'output' command to redirect 'print' remotely.
+  - Added turning JIT off under LuaJIT to get reliable debug hook calls.
+  - Added setting/using global vars in a way that is 'strict.lua' friendly.
+  - Changed default port to 8172. Added setting port # using MOBDEBUG_PORT.
+  - Updated license to add remdebug license information.
+  - Upgraded to Serpent v0.20 to add serialization of metatables with 
+    __tostring and fix serialization of functions as shared keys.
+  - Fixed using correct environment after the main script is done.
+
 v0.50 (Oct 05 2012)
   - Improved path matching when absolute and relative paths are used.
   - Improved performance; thanks to Stephen Nichols for profiling and

@@ -2,11 +2,11 @@ This directory contains some examples that show how MobDebug can be used.
 
 1. A server can be started with (server.lua):
 
-  require("mobdebug").listen() -- same as listen("*", 8171)
+  require("mobdebug").listen() -- same as listen("*", 8172)
 
 2. A client to debug a particular script can be started with (start.lua):
 
-  require("mobdebug").start() -- same as start("localhost", 8171)
+  require("mobdebug").start() -- same as start("localhost", 8172)
 
   print("Start")
   local foo = 0
@@ -18,7 +18,7 @@ This directory contains some examples that show how MobDebug can be used.
 
 3. A client to debug an arbitrary script can be started with (loop.lua):
 
-  require("mobdebug").loop() -- same as loop("localhost", 8171)
+  require("mobdebug").loop() -- same as loop("localhost", 8172)
 
 The server can then execute "load load.lua" command, which will load
 'load.lua' script for debugging.
@@ -33,7 +33,7 @@ debugged. This is mostly used to improve performance of the application
 being debugged as the application will run with its normal speed when
 the debugging is turned off.
 
-  require("mobdebug").start() -- same as start("localhost", 8171)
+  require("mobdebug").start() -- same as start("localhost", 8172)
   require("mobdebug").off()
 
   print("Start")

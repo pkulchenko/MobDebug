@@ -1,6 +1,6 @@
 local mobdebug = require "mobdebug"
 local socket = require "socket"
-local server = socket.bind('*', 8171)
+local server = socket.bind('*', 8172)
 
 realprint = print
 -- uncomment the next line if you ONLY want too see debug output
