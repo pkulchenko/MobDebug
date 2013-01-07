@@ -1,12 +1,12 @@
 --
--- MobDebug 0.51
+-- MobDebug 0.511
 -- Copyright 2011-12 Paul Kulchenko
 -- Based on RemDebug 1.0 Copyright Kepler Project 2005
 --
 
 local mobdebug = {
   _NAME = "mobdebug",
-  _VERSION = 0.51,
+  _VERSION = 0.511,
   _COPYRIGHT = "Paul Kulchenko",
   _DESCRIPTION = "Mobile Remote Debugger for the Lua programming language",
   port = os and os.getenv and os.getenv("MOBDEBUG_PORT") or 8172,
@@ -16,6 +16,7 @@ local mobdebug = {
 local coroutine = coroutine
 local error = error
 local getfenv = getfenv
+local setfenv = setfenv
 local loadstring = loadstring
 local io = io
 local os = os
@@ -36,6 +37,24 @@ local genv = _G or _ENV
 local jit = rawget(genv, "jit")
 local mosync = rawget(genv, "mosync")
 local MOAICoroutine = rawget(genv, "MOAICoroutine")
+
+if not setfenv then -- Lua 5.2
+  -- based on http://lua-users.org/lists/lua-l/2010-06/msg00314.html
+  -- this assumes f is a function
+  local function findenv(f)
+    local level = 1
+    repeat
+      local name, value = debug.getupvalue(f, level)
+      if name == '_ENV' then return level, value end
+      level = level + 1
+    until name == nil
+    return nil end
+  getfenv = function (f) return(select(2, findenv(f)) or _G) end
+  setfenv = function (f, t)
+    local level = findenv(f)
+    if level then debug.setupvalue(f, level, t) end
+    return f end
+end
 
 -- check for OS and convert file names to lower case on windows
 -- (its file system is case insensitive, but case preserving), as setting a
