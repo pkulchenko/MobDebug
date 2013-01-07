@@ -40,8 +40,8 @@ local MOAICoroutine = rawget(genv, "MOAICoroutine")
 -- check for OS and convert file names to lower case on windows
 -- (its file system is case insensitive, but case preserving), as setting a
 -- breakpoint on x:\Foo.lua will not work if the file was loaded as X:\foo.lua.
-local iswindows = os.getenv('WINDIR')
-  or (os.getenv('OS') or ''):match('[Ww]indows')
+local iswindows = os and os.getenv and (os.getenv('WINDIR')
+  or (os.getenv('OS') or ''):match('[Ww]indows'))
   or pcall(require, "winapi")
 
 -- this is a socket class that implements maConnect interface
