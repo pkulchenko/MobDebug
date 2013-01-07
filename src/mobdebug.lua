@@ -437,7 +437,7 @@ local function stack_depth(start_depth)
   return start_depth
 end
 
-local function is_safe(stack_level, conservative)
+local function is_safe(stack_level)
   -- the stack grows up: 0 is getinfo, 1 is is_safe, 2 is debug_hook, 3 is user function
   if stack_level == 3 then return true end
   local main = debug.getinfo(3, "S").source
@@ -446,7 +446,7 @@ local function is_safe(stack_level, conservative)
     -- return if it is not safe to abort
     local info = debug.getinfo(i, "S")
     if not info then return true end
-    if conservative and info.source ~= main or info.what == "C" then return false end
+    if info.what == "C" then return false end
   end
   return true
 end
