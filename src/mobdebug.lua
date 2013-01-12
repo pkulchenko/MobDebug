@@ -865,7 +865,7 @@ local function debugger_loop(sfile, sline)
 end
 
 local function connect(controller_host, controller_port)
-  return socket.connect(controller_host, controller_port)
+  return (socket.connect4 or socket.connect)(controller_host, controller_port)
 end
 
 local function isrunning()
@@ -880,7 +880,7 @@ local function start(controller_host, controller_port)
   controller_host = controller_host or "localhost"
   controller_port = controller_port or mobdebug.port
 
-  server = socket.connect(controller_host, controller_port)
+  server = (socket.connect4 or socket.connect)(controller_host, controller_port)
   if server then
     rset = {server} -- store hash to avoid recreating it later
     -- check if we are called from the debugger as this may happen
@@ -921,7 +921,7 @@ local function controller(controller_host, controller_port)
   controller_port = controller_port or mobdebug.port
 
   local exitonerror = not skip -- exit if not running a scratchpad
-  server = socket.connect(controller_host, controller_port)
+  server = (socket.connect4 or socket.connect)(controller_host, controller_port)
   if server then
     rset = {server} -- store hash to avoid recreating it later
 
