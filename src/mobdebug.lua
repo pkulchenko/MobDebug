@@ -1,12 +1,12 @@
 --
--- MobDebug 0.511
+-- MobDebug 0.512
 -- Copyright 2011-12 Paul Kulchenko
 -- Based on RemDebug 1.0 Copyright Kepler Project 2005
 --
 
 local mobdebug = {
   _NAME = "mobdebug",
-  _VERSION = 0.511,
+  _VERSION = 0.512,
   _COPYRIGHT = "Paul Kulchenko",
   _DESCRIPTION = "Mobile Remote Debugger for the Lua programming language",
   port = os and os.getenv and os.getenv("MOBDEBUG_PORT") or 8172,
@@ -593,6 +593,8 @@ local function debug_hook(event, line)
       -- only abort if safe; if not, there is another (earlier) check inside
       -- debug_hook, which will abort execution at the first safe opportunity
       if is_safe(stack_level) then error(abort) end
+    elseif not status and res then
+      error(res, 2) -- report any other (internal) errors back to the application
     end
 
     if vars then restore_vars(vars) end
@@ -649,7 +651,7 @@ local function debugger_loop(sfile, sline)
         elseif mobdebug.yield then mobdebug.yield()
         end
       elseif not line and err == "closed" then
-        error("Debugger connection unexpectedly closed")
+        error("Debugger connection unexpectedly closed", 0)
       else
         break
       end
@@ -906,7 +908,9 @@ local function start(controller_host, controller_port)
     end
     coro_debugger = coroutine.create(debugger_loop)
     debug.sethook(debug_hook, "lcr")
-    return coroutine.resume(coro_debugger, file, info.currentline)
+    local ok, res = coroutine.resume(coro_debugger, file, info.currentline)
+    if not ok and res then error(res, 2) end
+    return true
   else
     print("Could not connect to " .. controller_host .. ":" .. controller_port)
   end
@@ -1186,9 +1190,9 @@ local function handle(params, client, options)
         client:send(lines)
       end
       while true do
-        local params = client:receive()
+        local params, err = client:receive()
         if not params then
-          return nil, nil, "Debugger error: missing response after EXEC/LOAD"
+          return nil, nil, "Debugger connection " .. (err or "error")
         end
         local done = true
         local _, _, status, len = string.find(params, "^(%d+).-%s+(%d+)%s*$")
