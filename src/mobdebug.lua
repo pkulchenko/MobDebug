@@ -1,12 +1,12 @@
 --
--- MobDebug 0.512
+-- MobDebug 0.513
 -- Copyright 2011-12 Paul Kulchenko
 -- Based on RemDebug 1.0 Copyright Kepler Project 2005
 --
 
 local mobdebug = {
   _NAME = "mobdebug",
-  _VERSION = 0.512,
+  _VERSION = 0.513,
   _COPYRIGHT = "Paul Kulchenko",
   _DESCRIPTION = "Mobile Remote Debugger for the Lua programming language",
   port = os and os.getenv and os.getenv("MOBDEBUG_PORT") or 8172,
@@ -237,7 +237,7 @@ end
 local function q(s) return s:gsub('([%(%)%.%%%+%-%*%?%[%^%$%]])','%%%1') end
 
 local serpent = (function() ---- include Serpent module for serialization
-local n, v = "serpent", 0.20 -- (C) 2012 Paul Kulchenko; MIT License
+local n, v = "serpent", 0.22 -- (C) 2012 Paul Kulchenko; MIT License
 local c, d = "Paul Kulchenko", "Serializer and pretty printer of Lua data types"
 local snum = {[tostring(1/0)]='1/0 --[[math.huge]]',[tostring(-1/0)]='-1/0 --[[-math.huge]]',[tostring(0/0)]='0/0'}
 local badtype = {thread = true, userdata = true}
@@ -297,7 +297,7 @@ local function s(t, opts)
       if level >= maxl then return tag..'{}'..comment('max', level) end
       seen[t] = insref or spath -- set path to use as reference
       if getmetatable(t) and getmetatable(t).__tostring
-        then return tag..safestr(tostring(t))..comment("meta", level) end
+        then return tag..val2str(tostring(t),nil,indent,false,nil,nil,level+1)..comment("meta", level) end
       if next(t) == nil then return tag..'{}'..comment(t, level) end -- table empty
       local maxn, o, out = #t, {}, {}
       for key = 1, maxn do table.insert(o, key) end
@@ -305,7 +305,9 @@ local function s(t, opts)
       if opts.sortkeys then alphanumsort(o, opts.sortkeys) end
       for n, key in ipairs(o) do
         local value, ktype, plainindex = t[key], type(key), n <= maxn and not sparse
-        if opts.ignore and opts.ignore[value] -- skip ignored values; do nothing
+        if opts.valignore and opts.valignore[value] -- skip ignored values; do nothing
+        or opts.keyallow and not opts.keyallow[key]
+        or opts.valtypeignore and opts.valtypeignore[type(value)] -- skipping ignored value types
         or sparse and value == nil then -- skipping nils; do nothing
         elseif ktype == 'table' or ktype == 'function' or badtype[ktype] then
           if not seen[key] and not globals[key] then
@@ -459,8 +461,6 @@ end
 local function is_safe(stack_level)
   -- the stack grows up: 0 is getinfo, 1 is is_safe, 2 is debug_hook, 3 is user function
   if stack_level == 3 then return true end
-  local main = debug.getinfo(3, "S").source
-
   for i = 3, stack_level do
     -- return if it is not safe to abort
     local info = debug.getinfo(i, "S")
@@ -581,7 +581,9 @@ local function debug_hook(event, line)
       while status and res == 'stack' do
         -- resume with the stack trace and variables
         if vars then restore_vars(vars) end -- restore vars so they are reflected in stack values
-        status, res = coroutine.resume(coro_debugger, events.STACK, stack(3), file, line)
+        -- this may fail if __tostring method fails at run-time
+        local ok, snapshot = pcall(stack, 4)
+        status, res = coroutine.resume(coro_debugger, ok and events.STACK or events.BREAK, snapshot, file, line)
       end
     end
 
@@ -606,12 +608,13 @@ local function stringify_results(status, ...)
 
   local t = {...}
   for i,v in pairs(t) do -- stringify each of the returned values
-    t[i] = serpent.line(v, {nocode = true, comment = 1})
+    local ok, res = pcall(serpent.line, v, {nocode = true, comment = 1})
+    t[i] = ok and res or ("%q"):format(res):gsub("\010","n"):gsub("\026","\\026")
   end
   -- stringify table with all returned values
   -- this is done to allow each returned value to be used (serialized or not)
   -- intependently and to preserve "original" comments
-  return status, serpent.dump(t, {sparse = false})
+  return pcall(serpent.dump, t, {sparse = false})
 end
 
 local function debugger_loop(sfile, sline)
@@ -824,16 +827,20 @@ local function debugger_loop(sfile, sline)
       -- as it requires yielding back to debug_hook it cannot be executed
       -- if we have not seen the hook yet as happens after start().
       -- in this case we simply return an empty result
-      if not seen_hook then
-        server:send("200 OK " .. serpent.dump({}) .. "\n")
+      local vars, ev = {}
+      if seen_hook then
+        ev, vars = coroutine.yield("stack")
+      end
+      if ev and ev ~= events.STACK then
+        server:send("401 Error in Execution " .. #vars .. "\n")
+        server:send(vars)
       else
-        -- yield back to debug hook to get stack information
-        local ev, vars = coroutine.yield("stack")
-        if ev == events.STACK then
-          server:send("200 OK " ..
-            serpent.dump(vars, {nocode = true, sparse = false}) .. "\n")
+        local ok, res = pcall(serpent.dump, vars, {nocode = true, sparse = false})
+        if ok then
+          server:send("200 OK " .. res .. "\n")
         else
-          server:send("401 Error in Expression 0\n")
+          server:send("401 Error in Execution " .. #res .. "\n")
+          server:send(res)
         end
       end
     elseif command == "OUTPUT" then
@@ -847,7 +854,7 @@ local function debugger_loop(sfile, sline)
           while true do
             if mode == 'c' then iobase.print(unpack(tbl)) end
             for n = 1, #tbl do
-              tbl[n] = serpent.line(tbl[n], {nocode = true, comment = false}) end
+              tbl[n] = select(2, pcall(serpent.line, tbl[n], {nocode = true, comment = false})) end
             local file = table.concat(tbl, "\t").."\n"
             server:send("204 Output " .. stream .. " " .. #file .. "\n" .. file)
             tbl = {coroutine.yield()}
@@ -1285,8 +1292,10 @@ local function handle(params, client, options)
       end
       return stack
     elseif status == "401" then
-      local res = "Error in stack result"
-      print(res)
+      local _, _, len = string.find(resp, "%s+(%d+)%s*$")
+      len = tonumber(len)
+      local res = len > 0 and client:receive(len) or "Invalid stack information."
+      print("Error in expression: " .. res)
       return nil, nil, res
     else
       print("Unknown error")
