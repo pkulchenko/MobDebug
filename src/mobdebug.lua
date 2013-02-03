@@ -1,12 +1,12 @@
 --
--- MobDebug 0.5161
+-- MobDebug 0.5162
 -- Copyright 2011-12 Paul Kulchenko
 -- Based on RemDebug 1.0 Copyright Kepler Project 2005
 --
 
 local mobdebug = {
   _NAME = "mobdebug",
-  _VERSION = 0.5161,
+  _VERSION = 0.5162,
   _COPYRIGHT = "Paul Kulchenko",
   _DESCRIPTION = "Mobile Remote Debugger for the Lua programming language",
   port = os and os.getenv and os.getenv("MOBDEBUG_PORT") or 8172,
@@ -1470,6 +1470,22 @@ local function moai()
   end
 end
 
+-- this is a function that removes all hooks and closes the socket to
+-- report back to the controller that the debugging is done.
+-- the script that called `done` can still continue.
+local function done()
+  if not (isrunning() and server) then return end
+
+  if not jit then
+    for co, debugged in pairs(coroutines) do
+      if debugged then debug.sethook(co) end
+    end
+  end
+
+  debug.sethook()
+  server:close()
+end
+
 -- make public functions available
 mobdebug.listen = listen
 mobdebug.loop = loop
@@ -1481,6 +1497,7 @@ mobdebug.on = on
 mobdebug.off = off
 mobdebug.moai = moai
 mobdebug.coro = coro
+mobdebug.done = done
 mobdebug.line = serpent.line
 mobdebug.dump = serpent.dump
 mobdebug.yield = nil -- callback
