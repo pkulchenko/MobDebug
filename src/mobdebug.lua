@@ -1,12 +1,12 @@
 --
--- MobDebug 0.52
+-- MobDebug 0.521
 -- Copyright 2011-13 Paul Kulchenko
 -- Based on RemDebug 1.0 Copyright Kepler Project 2005
 --
 
 local mobdebug = {
   _NAME = "mobdebug",
-  _VERSION = 0.52,
+  _VERSION = 0.521,
   _COPYRIGHT = "Paul Kulchenko",
   _DESCRIPTION = "Mobile Remote Debugger for the Lua programming language",
   port = os and os.getenv and os.getenv("MOBDEBUG_PORT") or 8172,
@@ -811,7 +811,25 @@ local function start(controller_host, controller_port)
     -- provide our own traceback function to report the error remotely
     do
       local dtraceback = debug.traceback
-      debug.traceback = function (err) genv.print(dtraceback(err, 3)) end
+      debug.traceback = function (...)
+        if select('#', ...) >= 1 then
+          local err, lvl = ...
+          if err and type(err) ~= 'thread' then
+            local trace = dtraceback(err, (lvl or 2)+1)
+            if genv.print == iobase.print then -- no remote redirect
+              return trace
+            else
+              genv.print(trace) -- report the error remotely
+              return -- don't report locally to avoid double reporting
+            end
+          end
+        end
+        -- direct call to debug.traceback: return the original.
+        -- debug.traceback(nil, level) doesn't work in Lua 5.1
+        -- (http://lua-users.org/lists/lua-l/2011-06/msg00574.html), so
+        -- simply remove first frame from the stack trace
+        return (dtraceback(...):gsub("(stack traceback:\n)[^\n]*\n", "%1"))
+      end
     end
     coro_debugger = coroutine.create(debugger_loop)
     debug.sethook(debug_hook, "lcr")
