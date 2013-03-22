@@ -1,12 +1,12 @@
 --
--- MobDebug 0.5221
+-- MobDebug 0.5222
 -- Copyright 2011-13 Paul Kulchenko
 -- Based on RemDebug 1.0 Copyright Kepler Project 2005
 --
 
 local mobdebug = {
   _NAME = "mobdebug",
-  _VERSION = 0.5221,
+  _VERSION = 0.5222,
   _COPYRIGHT = "Paul Kulchenko",
   _DESCRIPTION = "Mobile Remote Debugger for the Lua programming language",
   port = os and os.getenv and os.getenv("MOBDEBUG_PORT") or 8172,
@@ -101,7 +101,7 @@ end
 local function q(s) return s:gsub('([%(%)%.%%%+%-%*%?%[%^%$%]])','%%%1') end
 
 local serpent = (function() ---- include Serpent module for serialization
-local n, v = "serpent", 0.224 -- (C) 2012-13 Paul Kulchenko; MIT License
+local n, v = "serpent", 0.225 -- (C) 2012-13 Paul Kulchenko; MIT License
 local c, d = "Paul Kulchenko", "Lua serializer and pretty printer"
 local snum = {[tostring(1/0)]='1/0 --[[math.huge]]',[tostring(-1/0)]='-1/0 --[[-math.huge]]',[tostring(0/0)]='0/0'}
 local badtype = {thread = true, userdata = true}
@@ -198,7 +198,8 @@ local function s(t, opts)
   local sepr = indent and "\n" or ";"..space
   local body = val2str(t, name, indent) -- this call also populates sref
   local tail = #sref>1 and table.concat(sref, sepr)..sepr or ''
-  return not name and body or "do local "..body..sepr..tail.."return "..name..sepr.."end"
+  local warn = opts.comment and #sref>1 and space.."--[[incomplete output with shared/self-references skipped]]" or ''
+  return not name and body..warn or "do local "..body..sepr..tail.."return "..name..sepr.."end"
 end
 
 local function merge(a, b) if b then for k,v in pairs(b) do a[k] = v end end; return a; end
