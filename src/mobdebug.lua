@@ -1,12 +1,12 @@
 --
--- MobDebug 0.522
+-- MobDebug 0.5221
 -- Copyright 2011-13 Paul Kulchenko
 -- Based on RemDebug 1.0 Copyright Kepler Project 2005
 --
 
 local mobdebug = {
   _NAME = "mobdebug",
-  _VERSION = 0.522,
+  _VERSION = 0.5221,
   _COPYRIGHT = "Paul Kulchenko",
   _DESCRIPTION = "Mobile Remote Debugger for the Lua programming language",
   port = os and os.getenv and os.getenv("MOBDEBUG_PORT") or 8172,
@@ -799,10 +799,16 @@ local function start(controller_host, controller_port)
     -- check if we are called from the debugger as this may happen
     -- when another debugger function calls start(); only check one level deep
     local this = debug.getinfo(1, "S").source
-    local info = debug.getinfo(2, "Sl")
-    if info.source == this then info = debug.getinfo(3, "Sl") end
+    local level = 2
+    local info = debug.getinfo(level, "Sl")
+    -- find first appropriate call up the stack, ignoring calls from
+    -- the debugger or C functions (like pcall or assert)
+    while info and (info.source == this or info.what == "C") do
+      level = level + 1
+      info = debug.getinfo(level, "Sl")
+    end
 
-    local file = info.source
+    local file = (info or debug.getinfo(level-1, "Sl")).source
     if string.find(file, "@") == 1 then file = string.sub(file, 2) end
     if string.find(file, "%.[/\\]") == 1 then file = string.sub(file, 3) end
 
