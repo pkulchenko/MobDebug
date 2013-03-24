@@ -57,16 +57,16 @@ See LICENSE file
 ## History
 
 ### v0.52 (Mar 04 2013)
-    Added `done()` method to finish debugging and to allow the script to continue.
-    Added support for cross-platform remote debugging.
-    Added support for code reloading and coroutine debugging under LuaJIT (v2.0.1).
-    Added using `socket.connect4` when available.
-    Added support for debugging Lua 5.2 scripts.
-    Added check for `os.getenv` for those platforms that don't implement it.
-    Improved handling of run-time errors in serialized data (__tostring method).
-    Improved reporting of debugger errors to the application.
-    Moved mosync/mobileLua code into a separate module.
-    Fixed an issue with `eval/exec` commands not working immediately after `start()`.
+  - Added `done()` method to finish debugging and to allow the script to continue.
+  - Added support for cross-platform remote debugging.
+  - Added support for code reloading and coroutine debugging under LuaJIT (v2.0.1).
+  - Added using `socket.connect4` when available.
+  - Added support for debugging Lua 5.2 scripts.
+  - Added check for `os.getenv` for those platforms that don't implement it.
+  - Improved handling of run-time errors in serialized data (__tostring method).
+  - Improved reporting of debugger errors to the application.
+  - Moved mosync/mobileLua code into a separate module.
+  - Fixed an issue with `eval/exec` commands not working immediately after `start()`.
 
 ### v0.51 (Dec 13 2012)
   - Added yield callback to customize event loop call during debugging.
