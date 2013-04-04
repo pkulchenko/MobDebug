@@ -1,12 +1,12 @@
 --
--- MobDebug 0.5231
+-- MobDebug 0.5232
 -- Copyright 2011-13 Paul Kulchenko
 -- Based on RemDebug 1.0 Copyright Kepler Project 2005
 --
 
 local mobdebug = {
   _NAME = "mobdebug",
-  _VERSION = 0.5231,
+  _VERSION = 0.5232,
   _COPYRIGHT = "Paul Kulchenko",
   _DESCRIPTION = "Mobile Remote Debugger for the Lua programming language",
   port = os and os.getenv and os.getenv("MOBDEBUG_PORT") or 8172,
@@ -732,6 +732,8 @@ local function debugger_loop(sev, svars, sfile, sline)
       local _, _, dir = string.find(line, "^[A-Z]+%s+(.+)%s*$")
       if dir then
         basedir = iswindows and string.lower(dir) or dir
+        -- reset cached source as it may change with basedir
+        lastsource = nil
         server:send("200 OK\n")
       else
         server:send("400 Bad Request\n")
