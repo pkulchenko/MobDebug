@@ -1,12 +1,12 @@
 --
--- MobDebug 0.5232
+-- MobDebug 0.5233
 -- Copyright 2011-13 Paul Kulchenko
 -- Based on RemDebug 1.0 Copyright Kepler Project 2005
 --
 
 local mobdebug = {
   _NAME = "mobdebug",
-  _VERSION = 0.5232,
+  _VERSION = 0.5233,
   _COPYRIGHT = "Paul Kulchenko",
   _DESCRIPTION = "Mobile Remote Debugger for the Lua programming language",
   port = os and os.getenv and os.getenv("MOBDEBUG_PORT") or 8172,
@@ -630,7 +630,7 @@ local function debugger_loop(sev, svars, sfile, sline)
           if not loaded[k] then package.loaded[k] = nil end
         end
 
-        if size == 0 then -- RELOAD the current script being debugged
+        if size == 0 and name == '-' then -- RELOAD the current script being debugged
           server:send("200 OK 0\n")
           coroutine.yield("load")
         else
