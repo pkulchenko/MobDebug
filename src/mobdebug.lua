@@ -1,12 +1,12 @@
 --
--- MobDebug 0.523
+-- MobDebug 0.5231
 -- Copyright 2011-13 Paul Kulchenko
 -- Based on RemDebug 1.0 Copyright Kepler Project 2005
 --
 
 local mobdebug = {
   _NAME = "mobdebug",
-  _VERSION = 0.523,
+  _VERSION = 0.5231,
   _COPYRIGHT = "Paul Kulchenko",
   _DESCRIPTION = "Mobile Remote Debugger for the Lua programming language",
   port = os and os.getenv and os.getenv("MOBDEBUG_PORT") or 8172,
@@ -88,7 +88,7 @@ local step_over = false
 local step_level = 0
 local stack_level = 0
 local server
-local rset
+local buf
 local outputs = {}
 local iobase = {print = print}
 local basedir = ""
@@ -371,6 +371,15 @@ local function in_debugger()
   return false
 end
 
+local function is_pending(peer)
+  if not buf then -- if there is something already in the buffer, skip check
+    peer:settimeout(0) -- non-blocking
+    buf = peer:receive(1)
+    peer:settimeout() -- back to blocking
+  end
+  return buf
+end
+
 local function debug_hook(event, line)
   -- (1) LuaJIT needs special treatment. Because debug_hook is set for
   -- *all* coroutines, and not just the one being debugged as in regular Lua
@@ -472,7 +481,7 @@ local function debug_hook(event, line)
       (step_into
       or (step_over and stack_level <= step_level)
       or has_breakpoint(file, line)
-      or (socket.select(rset, nil, 0))[server])
+      or is_pending(server))
 
     if getin then
       vars = vars or capture_vars()
@@ -561,6 +570,8 @@ local function debugger_loop(sev, svars, sfile, sline)
       elseif not line and err == "closed" then
         error("Debugger connection unexpectedly closed", 0)
       else
+        -- if there is something in the pending buffer, prepend it to the line
+        if buf then line = buf .. line; buf = nil end
         break
       end
     end
@@ -796,7 +807,6 @@ local function start(controller_host, controller_port)
 
   server = (socket.connect4 or socket.connect)(controller_host, controller_port)
   if server then
-    rset = {server} -- store hash to avoid recreating it later
     -- check if we are called from the debugger as this may happen
     -- when another debugger function calls start(); only check one level deep
     local this = debug.getinfo(1, "S").source
@@ -862,8 +872,6 @@ local function controller(controller_host, controller_port)
   local exitonerror = not skip -- exit if not running a scratchpad
   server = (socket.connect4 or socket.connect)(controller_host, controller_port)
   if server then
-    rset = {server} -- store hash to avoid recreating it later
-
     local function report(trace, err)
       local msg = err .. "\n" .. trace
       server:send("401 Error in Execution " .. #msg .. "\n")
