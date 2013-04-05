@@ -1,12 +1,12 @@
 --
--- MobDebug 0.524
+-- MobDebug 0.525
 -- Copyright 2011-13 Paul Kulchenko
 -- Based on RemDebug 1.0 Copyright Kepler Project 2005
 --
 
 local mobdebug = {
   _NAME = "mobdebug",
-  _VERSION = 0.524,
+  _VERSION = 0.525,
   _COPYRIGHT = "Paul Kulchenko",
   _DESCRIPTION = "Mobile Remote Debugger for the Lua programming language",
   port = os and os.getenv and os.getenv("MOBDEBUG_PORT") or 8172,
@@ -59,9 +59,11 @@ end
 -- check for OS and convert file names to lower case on windows
 -- (its file system is case insensitive, but case preserving), as setting a
 -- breakpoint on x:\Foo.lua will not work if the file was loaded as X:\foo.lua.
-local iswindows = os and os.getenv and (os.getenv('WINDIR')
-  or (os.getenv('OS') or ''):match('[Ww]indows'))
-  or pcall(require, "winapi")
+-- OSX and Windows behave the same way (case insensitive, but case preserving)
+local iscasepreserving = os and os.getenv and (os.getenv('WINDIR')
+  or (os.getenv('OS') or ''):match('[Ww]indows')
+  or os.getenv('DYLD_LIBRARY_PATH'))
+  or not io.open("/proc")
 
 -- turn jit off based on Mike Pall's comment in this discussion:
 -- http://www.freelists.org/post/luajit/Debug-hooks-and-JIT,2
@@ -210,7 +212,7 @@ return { _NAME = n, _COPYRIGHT = c, _DESCRIPTION = d, _VERSION = v, serialize = 
 end)() ---- end of Serpent module
 
 local function removebasedir(path, basedir)
-  if iswindows then
+  if iscasepreserving then
     -- check if the lowercased path matches the basedir
     -- if so, return substring of the original path (to not lowercase it)
     return path:lower():find('^'..q(basedir:lower()))
@@ -264,14 +266,14 @@ end
 
 local function set_breakpoint(file, line)
   if file == '-' and lastfile then file = lastfile
-  elseif iswindows then file = string.lower(file) end
+  elseif iscasepreserving then file = string.lower(file) end
   if not breakpoints[line] then breakpoints[line] = {} end
   breakpoints[line][file] = true
 end
 
 local function remove_breakpoint(file, line)
   if file == '-' and lastfile then file = lastfile
-  elseif iswindows then file = string.lower(file) end
+  elseif iscasepreserving then file = string.lower(file) end
   if breakpoints[line] then breakpoints[line][file] = nil end
 end
 
@@ -448,10 +450,10 @@ local function debug_hook(event, line)
       -- so we handle all sources as filenames
       file = file:gsub("^@", ""):gsub("\\", "/")
       -- need this conversion to be applied to relative and absolute
-      -- file names as you may write "require 'Foo'" on Windows to
-      -- load "foo.lua" (as it's case insensitive) and breakpoints
+      -- file names as you may write "require 'Foo'" to
+      -- load "foo.lua" (on a case insensitive file system) and breakpoints
       -- set on foo.lua will not work if not converted to the same case.
-      if iswindows then file = string.lower(file) end
+      if iscasepreserving then file = string.lower(file) end
       if file:find("%./") == 1 then file = file:sub(3)
       else file = file:gsub('^'..q(basedir), '') end
 
@@ -736,7 +738,7 @@ local function debugger_loop(sev, svars, sfile, sline)
     elseif command == "BASEDIR" then
       local _, _, dir = string.find(line, "^[A-Z]+%s+(.+)%s*$")
       if dir then
-        basedir = iswindows and string.lower(dir) or dir
+        basedir = iscasepreserving and string.lower(dir) or dir
         -- reset cached source as it may change with basedir
         lastsource = nil
         server:send("200 OK\n")
