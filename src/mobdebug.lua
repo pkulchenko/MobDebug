@@ -1,15 +1,16 @@
 --
--- MobDebug 0.5233
+-- MobDebug 0.524
 -- Copyright 2011-13 Paul Kulchenko
 -- Based on RemDebug 1.0 Copyright Kepler Project 2005
 --
 
 local mobdebug = {
   _NAME = "mobdebug",
-  _VERSION = 0.5233,
+  _VERSION = 0.524,
   _COPYRIGHT = "Paul Kulchenko",
   _DESCRIPTION = "Mobile Remote Debugger for the Lua programming language",
   port = os and os.getenv and os.getenv("MOBDEBUG_PORT") or 8172,
+  checkcount = 200,
   yieldtimeout = 0.02,
 }
 
@@ -81,8 +82,7 @@ local lastfile
 local watchescnt = 0
 local abort -- default value is nil; this is used in start/loop distinction
 local seen_hook = false
-local skip
-local skipcount = 0
+local checkcount = 0
 local step_into = false
 local step_over = false
 local step_level = 0
@@ -247,14 +247,13 @@ local function stack(start)
     local source = debug.getinfo(i, "Snl")
     if not source then break end
 
-    -- remove basedir from source
     local src = source.source
     if src:find("@") == 1 then
       src = src:sub(2):gsub("\\", "/")
       if src:find("%./") == 1 then src = src:sub(3) end
     end
 
-    table.insert(stack, {
+    table.insert(stack, { -- remove basedir from source
       {source.name, removebasedir(src, basedir), source.linedefined,
        source.currentline, source.what, source.namewhat, source.short_src},
       vars(i+1)})
@@ -266,19 +265,19 @@ end
 local function set_breakpoint(file, line)
   if file == '-' and lastfile then file = lastfile
   elseif iswindows then file = string.lower(file) end
-  if not breakpoints[file] then breakpoints[file] = {} end
-  breakpoints[file][line] = true  
+  if not breakpoints[line] then breakpoints[line] = {} end
+  breakpoints[line][file] = true
 end
 
 local function remove_breakpoint(file, line)
   if file == '-' and lastfile then file = lastfile
   elseif iswindows then file = string.lower(file) end
-  if breakpoints[file] then breakpoints[file][line] = nil end
+  if breakpoints[line] then breakpoints[line][file] = nil end
 end
 
 -- this file name is already converted to lower case on windows.
 local function has_breakpoint(file, line)
-  return breakpoints[file] and breakpoints[file][line]
+  return breakpoints[line] and breakpoints[line][file]
 end
 
 local function restore_vars(vars)
@@ -372,10 +371,12 @@ local function in_debugger()
 end
 
 local function is_pending(peer)
-  if not buf then -- if there is something already in the buffer, skip check
+  -- if there is something already in the buffer, skip check
+  if not buf and checkcount >= mobdebug.checkcount then
     peer:settimeout(0) -- non-blocking
     buf = peer:receive(1)
     peer:settimeout() -- back to blocking
+    checkcount = 0
   end
   return buf
 end
@@ -411,13 +412,16 @@ local function debug_hook(event, line)
   elseif event == "return" or event == "tail return" then
     stack_level = stack_level - 1
   elseif event == "line" then
-
-    -- check if we need to skip some callbacks (to save time)
-    if skip then
-      skipcount = skipcount + 1
-      if skipcount < skip or not is_safe(stack_level) then return end
-      skipcount = 0
-    end
+    -- may need to fall through because of the following:
+    -- (1) step_into
+    -- (2) step_over and stack_level <= step_level (need stack_level)
+    -- (3) breakpoint; check for line first as it's known; then for file
+    -- (4) socket call (only do every Xth check)
+    -- (5) at least one watch is registered
+    if not (
+      step_into or step_over or breakpoints[line] or watchescnt > 0
+      or is_pending(server)
+    ) then checkcount = checkcount + 1; return end
 
     -- this is needed to check if the stack got shorter or longer.
     -- unfortunately counting call/return calls is not reliable.
@@ -431,6 +435,7 @@ local function debug_hook(event, line)
     -- have any other instructions to execute. it triggers three returns:
     -- "return, tail return, return", which needs to be accounted for.
     stack_level = stack_depth(stack_level+1)
+
     local caller = debug.getinfo(2, "S")
 
     -- grab the filename and fix it if needed
@@ -809,22 +814,6 @@ local function start(controller_host, controller_port)
 
   server = (socket.connect4 or socket.connect)(controller_host, controller_port)
   if server then
-    -- check if we are called from the debugger as this may happen
-    -- when another debugger function calls start(); only check one level deep
-    local this = debug.getinfo(1, "S").source
-    local level = 2
-    local info = debug.getinfo(level, "Sl")
-    -- find first appropriate call up the stack, ignoring calls from
-    -- the debugger or C functions (like pcall or assert)
-    while info and (info.source == this or info.what == "C") do
-      level = level + 1
-      info = debug.getinfo(level, "Sl")
-    end
-
-    local file = (info or debug.getinfo(level-1, "Sl")).source
-    if string.find(file, "@") == 1 then file = string.sub(file, 2) end
-    if string.find(file, "%.[/\\]") == 1 then file = string.sub(file, 3) end
-
     -- correct stack depth which already has some calls on it
     -- so it doesn't go into negative when those calls return
     -- as this breaks subsequence checks in stack_depth().
@@ -856,22 +845,21 @@ local function start(controller_host, controller_port)
     end
     coro_debugger = coroutine.create(debugger_loop)
     debug.sethook(debug_hook, "lcr")
-    local ok, res = coroutine.resume(coro_debugger, events.RESTART, capture_vars(), file, info.currentline)
-    if not ok and res then error(res, 2) end
+    step_into = true -- start with step command
     return true
   else
     print("Could not connect to " .. controller_host .. ":" .. controller_port)
   end
 end
 
-local function controller(controller_host, controller_port)
+local function controller(controller_host, controller_port, scratchpad)
   -- only one debugging session can be run (as there is only one debug hook)
   if isrunning() then return end
 
   controller_host = controller_host or "localhost"
   controller_port = controller_port or mobdebug.port
 
-  local exitonerror = not skip -- exit if not running a scratchpad
+  local exitonerror = not scratchpad
   server = (socket.connect4 or socket.connect)(controller_host, controller_port)
   if server then
     local function report(trace, err)
@@ -887,7 +875,7 @@ local function controller(controller_host, controller_port)
     while true do
       step_into = true -- start with step command
       abort = false -- reset abort flag from the previous loop
-      if skip then skipcount = skip end -- force suspend right away
+      if scratchpad then checkcount = mobdebug.checkcount end -- force suspend right away
 
       coro_debugee = coroutine.create(debugee)
       debug.sethook(coro_debugee, debug_hook, "lcr")
@@ -925,14 +913,12 @@ local function controller(controller_host, controller_port)
   return true
 end
 
-local function scratchpad(controller_host, controller_port, frequency)
-  skip = frequency or 100
-  return controller(controller_host, controller_port)
+local function scratchpad(controller_host, controller_port)
+  return controller(controller_host, controller_port, true)
 end
 
 local function loop(controller_host, controller_port)
-  skip = nil -- just in case if loop() is called after scratchpad()
-  return controller(controller_host, controller_port)
+  return controller(controller_host, controller_port, false)
 end
 
 local function on()
@@ -1022,9 +1008,8 @@ local function handle(params, client, options)
       file = string.gsub(file, "\\", "/") -- convert slash
       file = removebasedir(file, basedir)
       client:send("SETB " .. file .. " " .. line .. "\n")
-      if client:receive() == "200 OK" then 
-        if not breakpoints[file] then breakpoints[file] = {} end
-        breakpoints[file][line] = true
+      if client:receive() == "200 OK" then
+        set_breakpoint(file, line)
       else
         print("Error: breakpoint not inserted")
       end
@@ -1059,7 +1044,7 @@ local function handle(params, client, options)
       file = removebasedir(file, basedir)
       client:send("DELB " .. file .. " " .. line .. "\n")
       if client:receive() == "200 OK" then 
-        if breakpoints[file] then breakpoints[file][line] = nil end
+        remove_breakpoint(file, line)
       else
         print("Error: breakpoint not removed")
       end
@@ -1067,11 +1052,11 @@ local function handle(params, client, options)
       print("Invalid command")
     end
   elseif command == "delallb" then
-    for file, breaks in pairs(breakpoints) do
-      for line, _ in pairs(breaks) do
+    for line, breaks in pairs(breakpoints) do
+      for file, _ in pairs(breaks) do
         client:send("DELB " .. file .. " " .. line .. "\n")
-        if client:receive() == "200 OK" then 
-          breakpoints[file][line] = nil
+        if client:receive() == "200 OK" then
+          remove_breakpoint(file, line)
         else
           print("Error: breakpoint at file " .. file .. " line " .. line .. " not removed")
         end
@@ -1193,12 +1178,10 @@ local function handle(params, client, options)
       print("Invalid command")
     end
   elseif command == "listb" then
-    for k, v in pairs(breakpoints) do
-      local b = k .. ": " -- get filename
-      for k in pairs(v) do
-        b = b .. k .. " " -- get line numbers
+    for l, v in pairs(breakpoints) do
+      for f in pairs(v) do
+        print(f .. ": " .. l)
       end
-      print(b)
     end
   elseif command == "listw" then
     for i, v in pairs(watches) do
