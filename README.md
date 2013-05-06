@@ -56,6 +56,19 @@ See LICENSE file
 
 ## History
 
+### v0.53 (May 06 2013)
+  - Added handling of case-insensitive filenames on OSX.
+  - Allowed start() to be called inside other functions (like assert).
+  - Improved debugging performance.
+  - Replaced socket.select with non-blocking .receive as it is faster.
+  - Upgraded serializer to add notification on incomplete output.
+  - Upgraded serializer (v0.224) to add support for __tostring and __serialize metamethods.
+  - Updated to allow `debug.traceback()` to be called under debugger.
+  - Fixed 'breaking' after executing OUT command that never reaches the target level.
+  - Fixed terminating debugging of an empty script.
+  - Fixed resetting cached source as it may change when basedir changes.
+  - Fix stack trace when LuaJIT FFI data is present (add `cdata` handling).
+
 ### v0.52 (Mar 04 2013)
   - Added `done()` method to finish debugging and to allow the script to continue.
   - Added support for cross-platform remote debugging.
