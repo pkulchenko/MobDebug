@@ -1,12 +1,12 @@
 --
--- MobDebug 0.53
+-- MobDebug 0.531
 -- Copyright 2011-13 Paul Kulchenko
 -- Based on RemDebug 1.0 Copyright Kepler Project 2005
 --
 
 local mobdebug = {
   _NAME = "mobdebug",
-  _VERSION = 0.53,
+  _VERSION = 0.531,
   _COPYRIGHT = "Paul Kulchenko",
   _DESCRIPTION = "Mobile Remote Debugger for the Lua programming language",
   port = os and os.getenv and os.getenv("MOBDEBUG_PORT") or 8172,
@@ -643,7 +643,8 @@ local function debugger_loop(sev, svars, sfile, sline)
           server:send("200 OK 0\n")
           coroutine.yield("load")
         else
-          local chunk = server:receive(size)
+          -- receiving 0 bytes blocks (at least in luasocket 2.0.2), so skip reading
+          local chunk = size == 0 and "" or server:receive(size)
           if chunk then -- LOAD a new script for debugging
             local func, res = loadstring(chunk, "@"..name)
             if func then
@@ -1123,7 +1124,7 @@ local function handle(params, client, options)
         local file = string.gsub(exp, "\\", "/") -- convert slash
         file = removebasedir(file, basedir)
         client:send("LOAD " .. #lines .. " " .. file .. "\n")
-        client:send(lines)
+        if #lines > 0 then client:send(lines) end
       end
       while true do
         local params, err = client:receive()
