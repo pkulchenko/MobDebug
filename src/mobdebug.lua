@@ -1,12 +1,12 @@
 --
--- MobDebug 0.532
+-- MobDebug 0.533
 -- Copyright 2011-13 Paul Kulchenko
 -- Based on RemDebug 1.0 Copyright Kepler Project 2005
 --
 
 local mobdebug = {
   _NAME = "mobdebug",
-  _VERSION = 0.532,
+  _VERSION = 0.533,
   _COPYRIGHT = "Paul Kulchenko",
   _DESCRIPTION = "Mobile Remote Debugger for the Lua programming language",
   port = os and os.getenv and os.getenv("MOBDEBUG_PORT") or 8172,
@@ -277,9 +277,9 @@ local function remove_breakpoint(file, line)
   if breakpoints[line] then breakpoints[line][file] = nil end
 end
 
--- this file name is already converted to lower case on windows.
 local function has_breakpoint(file, line)
-  return breakpoints[line] and breakpoints[line][file]
+  return breakpoints[line]
+     and breakpoints[line][iscasepreserving and string.lower(file) or file]
 end
 
 local function restore_vars(vars)
@@ -446,23 +446,26 @@ local function debug_hook(event, line)
     local file = lastfile
     if (lastsource ~= caller.source) then
       file, lastsource = caller.source, caller.source
-      -- the easiest/fastest way would be to check for file names starting
-      -- with '@', but users can supply names that may not use '@',
+      -- technically, users can supply names that may not use '@',
       -- for example when they call loadstring('...', 'filename.lua').
-      -- so we handle all sources as filenames
-      file = file:gsub("^@", ""):gsub("\\", "/")
-      -- need this conversion to be applied to relative and absolute
-      -- file names as you may write "require 'Foo'" to
-      -- load "foo.lua" (on a case insensitive file system) and breakpoints
-      -- set on foo.lua will not work if not converted to the same case.
-      if iscasepreserving then file = string.lower(file) end
-      if file:find("%./") == 1 then file = file:sub(3)
-      else file = file:gsub('^'..q(basedir), '') end
-
-      -- fix filenames for loaded strings that may contain scripts with newlines;
-      -- some filesystems may allow "\n" in filenames, which is not supported here.
-      if file:find("\n") then
-        file = file:gsub("\n", ' '):sub(1, 32) -- limit to 32 chars
+      -- Unfortunately, there is no reliable/quick way to figure out
+      -- what is the filename and what is the source code.
+      -- The following will work if the supplied filename uses Unix path.
+      if file:find("^@") then
+        file = file:gsub("^@", ""):gsub("\\", "/")
+        -- need this conversion to be applied to relative and absolute
+        -- file names as you may write "require 'Foo'" to
+        -- load "foo.lua" (on a case insensitive file system) and breakpoints
+        -- set on foo.lua will not work if not converted to the same case.
+        if iscasepreserving then file = string.lower(file) end
+        if file:find("%./") == 1 then file = file:sub(3)
+        else file = file:gsub('^'..q(basedir), '') end
+        -- some file systems allow newlines in file names; remove these.
+        file = file:gsub("\n", ' ')
+      else
+        -- serialize and return the source code; need serialization as scripts
+        -- may include newlines, but the names are expected to one one line.
+        file = serpent.line(file) -- serialize file content as a string
       end
 
       -- set to true if we got here; this only needs to be done once per
@@ -1010,8 +1013,11 @@ local function handle(params, client, options)
   elseif command == "setb" then
     _, _, _, file, line = string.find(params, "^([a-z]+)%s+(.-)%s+(%d+)%s*$")
     if file and line then
-      file = string.gsub(file, "\\", "/") -- convert slash
-      file = removebasedir(file, basedir)
+      -- if this is a file name, and not a file source
+      if not file:find('^".*"$') then
+        file = string.gsub(file, "\\", "/") -- convert slash
+        file = removebasedir(file, basedir)
+      end
       client:send("SETB " .. file .. " " .. line .. "\n")
       if client:receive() == "200 OK" then
         set_breakpoint(file, line)
@@ -1045,8 +1051,11 @@ local function handle(params, client, options)
   elseif command == "delb" then
     _, _, _, file, line = string.find(params, "^([a-z]+)%s+(.-)%s+(%d+)%s*$")
     if file and line then
-      file = string.gsub(file, "\\", "/") -- convert slash
-      file = removebasedir(file, basedir)
+      -- if this is a file name, and not a file source
+      if not file:find('^".*"$') then
+        file = string.gsub(file, "\\", "/") -- convert slash
+        file = removebasedir(file, basedir)
+      end
       client:send("DELB " .. file .. " " .. line .. "\n")
       if client:receive() == "200 OK" then 
         remove_breakpoint(file, line)
