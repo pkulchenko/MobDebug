@@ -1,12 +1,12 @@
 --
--- MobDebug 0.535
+-- MobDebug 0.5351
 -- Copyright 2011-13 Paul Kulchenko
 -- Based on RemDebug 1.0 Copyright Kepler Project 2005
 --
 
 local mobdebug = {
   _NAME = "mobdebug",
-  _VERSION = 0.535,
+  _VERSION = 0.5351,
   _COPYRIGHT = "Paul Kulchenko",
   _DESCRIPTION = "Mobile Remote Debugger for the Lua programming language",
   port = os and os.getenv and os.getenv("MOBDEBUG_PORT") or 8172,
@@ -26,6 +26,7 @@ local require = require
 local setmetatable = setmetatable
 local string = string
 local tonumber = tonumber
+local unpack = table.unpack or unpack
 
 -- if strict.lua is used, then need to avoid referencing some global
 -- variables, as they can be undefined;
@@ -1160,7 +1161,7 @@ local function handle(params, client, options)
               print("Error in processing results: " .. err)
               return nil, nil, "Error in processing results: " .. err
             end
-            print((table.unpack or unpack)(res))
+            print(unpack(res))
             return res[1], res
           end
         elseif status == "201" then
