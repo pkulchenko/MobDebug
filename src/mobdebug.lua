@@ -1,12 +1,12 @@
 --
--- MobDebug 0.5351
+-- MobDebug 0.5352
 -- Copyright 2011-13 Paul Kulchenko
 -- Based on RemDebug 1.0 Copyright Kepler Project 2005
 --
 
 local mobdebug = {
   _NAME = "mobdebug",
-  _VERSION = 0.5351,
+  _VERSION = 0.5352,
   _COPYRIGHT = "Paul Kulchenko",
   _DESCRIPTION = "Mobile Remote Debugger for the Lua programming language",
   port = os and os.getenv and os.getenv("MOBDEBUG_PORT") or 8172,
@@ -1384,8 +1384,9 @@ local function done()
   debug.sethook()
   server:close()
 
-  coro_debugger = nil -- this is to make sure isrunning() returns `false`
-  seen_hook = nil -- this is to make sure that the next start() call works
+  coro_debugger = nil -- to make sure isrunning() returns `false`
+  seen_hook = nil -- to make sure that the next start() call works
+  abort = nil -- to make sure that callback calls use proper "abort" value
 end
 
 -- make public functions available
