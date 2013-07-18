@@ -1,12 +1,12 @@
 --
--- MobDebug 0.536
+-- MobDebug 0.5361
 -- Copyright 2011-13 Paul Kulchenko
 -- Based on RemDebug 1.0 Copyright Kepler Project 2005
 --
 
 local mobdebug = {
   _NAME = "mobdebug",
-  _VERSION = 0.536,
+  _VERSION = 0.5361,
   _COPYRIGHT = "Paul Kulchenko",
   _DESCRIPTION = "Mobile Remote Debugger for the Lua programming language",
   port = os and os.getenv and os.getenv("MOBDEBUG_PORT") or 8172,
@@ -859,6 +859,7 @@ local function start(controller_host, controller_port)
     end
     coro_debugger = coroutine.create(debugger_loop)
     debug.sethook(debug_hook, "lcr")
+    seen_hook = nil -- reset in case the last start() call was refused
     step_into = true -- start with step command
     return true
   else
