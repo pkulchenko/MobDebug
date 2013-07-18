@@ -1,12 +1,12 @@
 --
--- MobDebug 0.5361
+-- MobDebug 0.5362
 -- Copyright 2011-13 Paul Kulchenko
 -- Based on RemDebug 1.0 Copyright Kepler Project 2005
 --
 
 local mobdebug = {
   _NAME = "mobdebug",
-  _VERSION = 0.5361,
+  _VERSION = 0.5362,
   _COPYRIGHT = "Paul Kulchenko",
   _DESCRIPTION = "Mobile Remote Debugger for the Lua programming language",
   port = os and os.getenv and os.getenv("MOBDEBUG_PORT") or 8172,
@@ -464,9 +464,10 @@ local function debug_hook(event, line)
         -- some file systems allow newlines in file names; remove these.
         file = file:gsub("\n", ' ')
       else
-        -- serialize and return the source code; need serialization as scripts
-        -- may include newlines, but the names are expected to one one line.
-        file = serpent.line(file) -- serialize file content as a string
+        -- this is either a file name coming from loadstring("chunk", "file"),
+        -- or the actual source code that needs to be serialized (as it may
+        -- include newlines); assume it's a file name if it's all on one line.
+        file = file:find("[\r\n]") and serpent.line(file) or file
       end
 
       -- set to true if we got here; this only needs to be done once per
