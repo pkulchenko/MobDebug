@@ -56,6 +56,18 @@ See LICENSE file
 
 ## History
 
+### v0.54 (Aug 30 2013)
+  - Added reset of hook visits in case earlier start() call is refused.
+  - Added saving host/port configuration to reuse in start/loop calls.
+  - Added handling of code fragments reported as 'source'.
+  - Improved handling of done() in environments that reuse VMs.
+  - Reset state to allow multiple start()/done() calls from the same process.
+  - Replaces `unpack` with `table.unpack` for Lua 5.2 compatibility.
+  - Updated filenames/source code heuristic to avoid serializing filenames.
+  - Upgraded Serpent to 0.24 to fix table serialization issue.
+  - Upgraded Serpent to 0.231 to fix luaffi issue.
+  - Fixed debugging of zero length scripts.
+
 ### v0.53 (May 06 2013)
   - Added handling of case-insensitive filenames on OSX.
   - Allowed start() to be called inside other functions (like assert).
