@@ -1,12 +1,12 @@
 --
--- MobDebug 0.543
+-- MobDebug 0.5431
 -- Copyright 2011-13 Paul Kulchenko
 -- Based on RemDebug 1.0 Copyright Kepler Project 2005
 --
 
 local mobdebug = {
   _NAME = "mobdebug",
-  _VERSION = 0.543,
+  _VERSION = 0.5431,
   _COPYRIGHT = "Paul Kulchenko",
   _DESCRIPTION = "Mobile Remote Debugger for the Lua programming language",
   port = os and os.getenv and os.getenv("MOBDEBUG_PORT") or 8172,
@@ -61,11 +61,12 @@ end
 -- check for OS and convert file names to lower case on windows
 -- (its file system is case insensitive, but case preserving), as setting a
 -- breakpoint on x:\Foo.lua will not work if the file was loaded as X:\foo.lua.
--- OSX and Windows behave the same way (case insensitive, but case preserving)
-local iscasepreserving = os and os.getenv and (os.getenv('WINDIR')
-  or (os.getenv('OS') or ''):match('[Ww]indows')
-  or os.getenv('DYLD_LIBRARY_PATH'))
-  or not io.open("/proc")
+-- OSX and Windows behave the same way (case insensitive, but case preserving).
+-- OSX can be configured to be case-sensitive, so check for that. This doesn't
+-- handle the case of different partitions having different case-sensitivity.
+local win = os and os.getenv and (os.getenv('WINDIR') or (os.getenv('OS') or ''):match('[Ww]indows')) and true or false
+local mac = not win and (os and os.getenv and os.getenv('DYLD_LIBRARY_PATH') or not io.open("/proc")) and true or false
+local iscasepreserving = win or (mac and io.open('/library') ~= nil)
 
 -- turn jit off based on Mike Pall's comment in this discussion:
 -- http://www.freelists.org/post/luajit/Debug-hooks-and-JIT,2
