@@ -1,12 +1,12 @@
 --
--- MobDebug 0.5431
+-- MobDebug 0.544
 -- Copyright 2011-13 Paul Kulchenko
 -- Based on RemDebug 1.0 Copyright Kepler Project 2005
 --
 
 local mobdebug = {
   _NAME = "mobdebug",
-  _VERSION = 0.5431,
+  _VERSION = 0.544,
   _COPYRIGHT = "Paul Kulchenko",
   _DESCRIPTION = "Mobile Remote Debugger for the Lua programming language",
   port = os and os.getenv and os.getenv("MOBDEBUG_PORT") or 8172,
@@ -217,6 +217,9 @@ return { _NAME = n, _COPYRIGHT = c, _DESCRIPTION = d, _VERSION = v, serialize = 
   line = function(a, opts) return s(a, merge({sortkeys = true, comment = true}, opts)) end,
   block = function(a, opts) return s(a, merge({indent = '  ', sortkeys = true, comment = true}, opts)) end }
 end)() ---- end of Serpent module
+
+mobdebug.line = serpent.line
+mobdebug.dump = serpent.dump
 
 local function removebasedir(path, basedir)
   if iscasepreserving then
@@ -488,7 +491,7 @@ local function debug_hook(event, line)
         -- this is either a file name coming from loadstring("chunk", "file"),
         -- or the actual source code that needs to be serialized (as it may
         -- include newlines); assume it's a file name if it's all on one line.
-        file = file:find("[\r\n]") and serpent.line(file) or file
+        file = file:find("[\r\n]") and mobdebug.line(file) or file
       end
 
       -- set to true if we got here; this only needs to be done once per
@@ -562,13 +565,13 @@ local function stringify_results(status, ...)
 
   local t = {...}
   for i,v in pairs(t) do -- stringify each of the returned values
-    local ok, res = pcall(serpent.line, v, {nocode = true, comment = 1})
+    local ok, res = pcall(mobdebug.line, v, {nocode = true, comment = 1})
     t[i] = ok and res or ("%q"):format(res):gsub("\010","n"):gsub("\026","\\026")
   end
   -- stringify table with all returned values
   -- this is done to allow each returned value to be used (serialized or not)
   -- intependently and to preserve "original" comments
-  return pcall(serpent.dump, t, {sparse = false})
+  return pcall(mobdebug.dump, t, {sparse = false})
 end
 
 local function debugger_loop(sev, svars, sfile, sline)
@@ -794,7 +797,7 @@ local function debugger_loop(sev, svars, sfile, sline)
         server:send("401 Error in Execution " .. #vars .. "\n")
         server:send(vars)
       else
-        local ok, res = pcall(serpent.dump, vars, {nocode = true, sparse = false})
+        local ok, res = pcall(mobdebug.dump, vars, {nocode = true, sparse = false})
         if ok then
           server:send("200 OK " .. res .. "\n")
         else
@@ -813,7 +816,7 @@ local function debugger_loop(sev, svars, sfile, sline)
           while true do
             if mode == 'c' then iobase.print(unpack(tbl)) end
             for n = 1, #tbl do
-              tbl[n] = select(2, pcall(serpent.line, tbl[n], {nocode = true, comment = false})) end
+              tbl[n] = select(2, pcall(mobdebug.line, tbl[n], {nocode = true, comment = false})) end
             local file = table.concat(tbl, "\t").."\n"
             server:send("204 Output " .. stream .. " " .. #file .. "\n" .. file)
             tbl = {coroutine.yield()}
@@ -1277,7 +1280,7 @@ local function handle(params, client, options)
         return nil, nil, stack
       end
       for _,frame in ipairs(stack) do
-        print(serpent.line(frame[1], {comment = false}))
+        print(mobdebug.line(frame[1], {comment = false}))
       end
       return stack
     elseif status == "401" then
@@ -1460,8 +1463,6 @@ mobdebug.off = off
 mobdebug.moai = moai
 mobdebug.coro = coro
 mobdebug.done = done
-mobdebug.line = serpent.line
-mobdebug.dump = serpent.dump
 mobdebug.yield = nil -- callback
 
 -- this is needed to make "require 'modebug'" to work when mobdebug
