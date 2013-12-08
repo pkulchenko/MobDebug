@@ -1452,6 +1452,7 @@ local function done()
 end
 
 -- make public functions available
+mobdebug.set_breakpoint = set_breakpoint
 mobdebug.listen = listen
 mobdebug.loop = loop
 mobdebug.scratchpad = scratchpad
