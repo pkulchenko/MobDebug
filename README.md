@@ -56,6 +56,20 @@ See LICENSE file
 
 ## History
 
+### v0.55 (Dec 14 2013)
+  - Added `setbreakpoint` and `removebreakpoint` public methods (closes #8).
+  - Fixed complex values 'captured' by redirected 'print' and not collected.
+  - Fixed error reporting on debugging non-existing file.
+  - Added ability to overwrite `line` and `dump` methods for serialization.
+  - Added handling of case-sensitive partitions on OSX (fixes #6, closes #7).
+  - Fixed Step Over/Out commands to stay in the same coroutine.
+  - Updated LICENSE information.
+  - Added optimization and limiting elements in a table in serializer (Serpent 0.25).
+  - Added support for `MOAICoroutine.new().run` to enable coroutine debugging.
+  - Added reporting of socket error for failed start()/loop() calls.
+  - Fixed debugging on/off handling in 'main' thread for LuaJIT.
+  - Fixed stepping through blocks with `nil` variables when 'strict' is in effect.
+
 ### v0.54 (Aug 30 2013)
   - Added reset of hook visits in case earlier start() call is refused.
   - Added saving host/port configuration to reuse in start/loop calls.
