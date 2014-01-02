@@ -1,12 +1,12 @@
 --
--- MobDebug 0.55
+-- MobDebug 0.5501
 -- Copyright 2011-13 Paul Kulchenko
 -- Based on RemDebug 1.0 Copyright Kepler Project 2005
 --
 
 local mobdebug = {
   _NAME = "mobdebug",
-  _VERSION = 0.55,
+  _VERSION = 0.5501,
   _COPYRIGHT = "Paul Kulchenko",
   _DESCRIPTION = "Mobile Remote Debugger for the Lua programming language",
   port = os and os.getenv and os.getenv("MOBDEBUG_PORT") or 8172,
@@ -14,17 +14,19 @@ local mobdebug = {
   yieldtimeout = 0.02,
 }
 
+local io = io
+local os = os
+local table = table
+local string = string
 local coroutine = coroutine
+
 local error = error
 local getfenv = getfenv
 local setfenv = setfenv
 local loadstring = loadstring or load -- "load" replaced "loadstring" in Lua 5.2
-local io = io
-local os = os
 local pairs = pairs
 local require = require
 local setmetatable = setmetatable
-local string = string
 local tonumber = tonumber
 local unpack = table.unpack or unpack
 local rawget = rawget
