@@ -4,6 +4,13 @@
 -- Based on RemDebug 1.0 Copyright Kepler Project 2005
 --
 
+local require = require
+local io = require "io"
+local os = require "os"
+local table = require "table"
+local string = require "string"
+local coroutine = require "coroutine"
+
 local mobdebug = {
   _NAME = "mobdebug",
   _VERSION = 0.5501,
@@ -14,18 +21,11 @@ local mobdebug = {
   yieldtimeout = 0.02,
 }
 
-local io = io
-local os = os
-local table = table
-local string = string
-local coroutine = coroutine
-
 local error = error
 local getfenv = getfenv
 local setfenv = setfenv
 local loadstring = loadstring or load -- "load" replaced "loadstring" in Lua 5.2
 local pairs = pairs
-local require = require
 local setmetatable = setmetatable
 local tonumber = tonumber
 local unpack = table.unpack or unpack
