@@ -1,5 +1,5 @@
 --
--- MobDebug 0.5501
+-- MobDebug 0.5502
 -- Copyright 2011-13 Paul Kulchenko
 -- Based on RemDebug 1.0 Copyright Kepler Project 2005
 --
@@ -13,7 +13,7 @@ local coroutine = require "coroutine"
 
 local mobdebug = {
   _NAME = "mobdebug",
-  _VERSION = 0.5501,
+  _VERSION = 0.5502,
   _COPYRIGHT = "Paul Kulchenko",
   _DESCRIPTION = "Mobile Remote Debugger for the Lua programming language",
   port = os and os.getenv and os.getenv("MOBDEBUG_PORT") or 8172,
@@ -546,7 +546,7 @@ local function debug_hook(event, line)
     -- need to recheck once more as resume after 'stack' command may
     -- return something else (for example, 'exit'), which needs to be handled
     if status and res and res ~= 'stack' then
-      if abort == nil and res == "exit" then os.exit(1); return end
+      if abort == nil and res == "exit" then os.exit(1, true); return end
       abort = res
       -- only abort if safe; if not, there is another (earlier) check inside
       -- debug_hook, which will abort execution at the first safe opportunity
@@ -1035,7 +1035,7 @@ local function handle(params, client, options)
       local breakpoint = client:receive()
       if not breakpoint then
         print("Program finished")
-        os.exit()
+        os.exit(0, true)
         return -- use return here for those cases where os.exit() is not wanted
       end
       local _, _, status = string.find(breakpoint, "^(%d+)")
@@ -1065,12 +1065,12 @@ local function handle(params, client, options)
         if size then
           local msg = client:receive(tonumber(size))
           print("Error in remote application: " .. msg)
-          os.exit(1)
+          os.exit(1, true)
           return nil, nil, msg -- use return here for those cases where os.exit() is not wanted
         end
       else
         print("Unknown error")
-        os.exit(1)
+        os.exit(1, true)
         -- use return here for those cases where os.exit() is not wanted
         return nil, nil, "Debugger error: unexpected response '" .. breakpoint .. "'"
       end
