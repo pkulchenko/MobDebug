@@ -1,19 +1,24 @@
 --
--- MobDebug 0.5503
--- Copyright 2011-13 Paul Kulchenko
+-- MobDebug 0.551
+-- Copyright 2011-14 Paul Kulchenko
 -- Based on RemDebug 1.0 Copyright Kepler Project 2005
 --
 
+-- use loaded modules or load explicitly on those systems that require that
 local require = require
-local io = require "io"
-local os = require "os"
-local table = require "table"
-local string = require "string"
-local coroutine = require "coroutine"
+local io = io or require "io"
+local table = table or require "table"
+local string = string or require "string"
+local coroutine = coroutine or require "coroutine"
+-- protect require "os" as it may fail on embedded systems without os module
+local os = os or (function(module)
+  local ok, res = pcall(require, module)
+  return ok and res or nil
+end)("os")
 
 local mobdebug = {
   _NAME = "mobdebug",
-  _VERSION = 0.5503,
+  _VERSION = 0.551,
   _COPYRIGHT = "Paul Kulchenko",
   _DESCRIPTION = "Mobile Remote Debugger for the Lua programming language",
   port = os and os.getenv and os.getenv("MOBDEBUG_PORT") or 8172,
@@ -33,9 +38,9 @@ local rawget = rawget
 
 -- if strict.lua is used, then need to avoid referencing some global
 -- variables, as they can be undefined;
--- use rawget to to avoid complaints from strict.lua at run-time.
+-- use rawget to avoid complaints from strict.lua at run-time.
 -- it's safe to do the initialization here as all these variables
--- should get defined values (of any) before the debugging starts.
+-- should get defined values (if any) before the debugging starts.
 -- there is also global 'wx' variable, which is checked as part of
 -- the debug loop as 'wx' can be loaded at any time during debugging.
 local genv = _G or _ENV
