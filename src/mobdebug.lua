@@ -1,5 +1,5 @@
 --
--- MobDebug 0.5502
+-- MobDebug 0.5503
 -- Copyright 2011-13 Paul Kulchenko
 -- Based on RemDebug 1.0 Copyright Kepler Project 2005
 --
@@ -13,7 +13,7 @@ local coroutine = require "coroutine"
 
 local mobdebug = {
   _NAME = "mobdebug",
-  _VERSION = 0.5502,
+  _VERSION = 0.5503,
   _COPYRIGHT = "Paul Kulchenko",
   _DESCRIPTION = "Mobile Remote Debugger for the Lua programming language",
   port = os and os.getenv and os.getenv("MOBDEBUG_PORT") or 8172,
@@ -108,7 +108,7 @@ end
 local function q(s) return s:gsub('([%(%)%.%%%+%-%*%?%[%^%$%]])','%%%1') end
 
 local serpent = (function() ---- include Serpent module for serialization
-local n, v = "serpent", 0.25 -- (C) 2012-13 Paul Kulchenko; MIT License
+local n, v = "serpent", 0.272 -- (C) 2012-13 Paul Kulchenko; MIT License
 local c, d = "Paul Kulchenko", "Lua serializer and pretty printer"
 local snum = {[tostring(1/0)]='1/0 --[[math.huge]]',[tostring(-1/0)]='-1/0 --[[-math.huge]]',[tostring(0/0)]='0/0'}
 local badtype = {thread = true, userdata = true, cdata = true}
@@ -118,7 +118,7 @@ for _,k in ipairs({'and', 'break', 'do', 'else', 'elseif', 'end', 'false',
   'return', 'then', 'true', 'until', 'while'}) do keyword[k] = true end
 for k,v in pairs(G) do globals[v] = k end -- build func to name mapping
 for _,g in ipairs({'coroutine', 'debug', 'io', 'math', 'string', 'table', 'os'}) do
-  for k,v in pairs(G[g]) do globals[v] = g..'.'..k end end
+  for k,v in pairs(G[g] or {}) do globals[v] = g..'.'..k end end
 
 local function s(t, opts)
   local name, indent, fatal, maxnum = opts.name, opts.indent, opts.fatal, opts.maxnum
@@ -140,13 +140,13 @@ local function s(t, opts)
     local plain = type(n) == "string" and n:match("^[%l%u_][%w_]*$") and not keyword[n]
     local safe = plain and n or '['..safestr(n)..']'
     return (path or '')..(plain and path and '.' or '')..safe, safe end
-  local alphanumsort = type(opts.sortkeys) == 'function' and opts.sortkeys or function(k, o, n)  -- k=keys, o=originaltable, n=padding
+  local alphanumsort = type(opts.sortkeys) == 'function' and opts.sortkeys or function(k, o, n) -- k=keys, o=originaltable, n=padding
     local maxn, to = tonumber(n) or 12, {number = 'a', string = 'b'}
     local function padnum(d) return ("%0"..maxn.."d"):format(d) end
     table.sort(k, function(a,b)
-      -- sort numeric keys first: k[key] is non-nil for numeric keys
-      return (k[a] and 0 or to[type(a)] or 'z')..(tostring(a):gsub("%d+",padnum))
-           < (k[b] and 0 or to[type(b)] or 'z')..(tostring(b):gsub("%d+",padnum)) end) end
+      -- sort numeric keys first: k[key] is not nil for numerical keys
+      return (k[a] ~= nil and 0 or to[type(a)] or 'z')..(tostring(a):gsub("%d+",padnum))
+           < (k[b] ~= nil and 0 or to[type(b)] or 'z')..(tostring(b):gsub("%d+",padnum)) end) end
   local function val2str(t, name, indent, insref, path, plainindex, level)
     local ttype, level, mt = type(t), (level or 0), getmetatable(t)
     local spath, sname = safename(path, name)
@@ -202,7 +202,7 @@ local function s(t, opts)
       seen[t] = insref or spath
       local ok, res = pcall(string.dump, t)
       local func = ok and ((opts.nocode and "function() --[[..skipped..]] end" or
-        "loadstring("..safestr(res)..",'@serialized')")..comment(t, level))
+        "((loadstring or load)("..safestr(res)..",'@serialized'))")..comment(t, level))
       return tag..(func or globerr(t, level))
     else return tag..safestr(t) end -- handle all other types
   end
@@ -213,8 +213,26 @@ local function s(t, opts)
   return not name and body..warn or "do local "..body..sepr..tail.."return "..name..sepr.."end"
 end
 
+local function deserialize(data, opts)
+  local f, res = (loadstring or load)('return '..data)
+  if not f then f, res = (loadstring or load)(data) end
+  if not f then return f, res end
+  if opts and opts.safe == false then return pcall(f) end
+
+  local count, thread = 0, coroutine.running()
+  local h, m, c = debug.gethook(thread)
+  debug.sethook(function (e, l) count = count + 1
+    if count >= 3 then error("cannot call functions") end
+  end, "c")
+  local res = {pcall(f)}
+  count = 0 -- set again, otherwise it's tripped on the next sethook
+  debug.sethook(thread, h, m, c)
+  return (table.unpack or unpack)(res)
+end
+
 local function merge(a, b) if b then for k,v in pairs(b) do a[k] = v end end; return a; end
 return { _NAME = n, _COPYRIGHT = c, _DESCRIPTION = d, _VERSION = v, serialize = s,
+  load = deserialize,
   dump = function(a, opts) return s(a, merge({name = '_', compact = true, sparse = true}, opts)) end,
   line = function(a, opts) return s(a, merge({sortkeys = true, comment = true}, opts)) end,
   block = function(a, opts) return s(a, merge({indent = '  ', sortkeys = true, comment = true}, opts)) end }
