@@ -100,7 +100,7 @@ local outputs = {}
 local iobase = {print = print}
 local basedir = ""
 local deferror = "execution aborted at default debugee"
-local debugee = function () 
+local debugee = function ()
   local a = 1
   for _ = 1, 10 do a = a + 1 end
   error(deferror)
@@ -640,7 +640,7 @@ local function debugger_loop(sev, svars, sfile, sline)
       end
     elseif command == "EXEC" then
       local _, _, chunk = string.find(line, "^[A-Z]+%s+(.+)$")
-      if chunk then 
+      if chunk then
         local func, res = loadstring(chunk)
         local status
         if func then
@@ -698,13 +698,13 @@ local function debugger_loop(sev, svars, sfile, sline)
       end
     elseif command == "SETW" then
       local _, _, exp = string.find(line, "^[A-Z]+%s+(.+)%s*$")
-      if exp then 
+      if exp then
         local func, res = loadstring("return(" .. exp .. ")")
         if func then
           watchescnt = watchescnt + 1
           local newidx = #watches + 1
           watches[newidx] = func
-          server:send("200 OK " .. newidx .. "\n") 
+          server:send("200 OK " .. newidx .. "\n")
         else
           server:send("401 Error in Expression " .. #res .. "\n")
           server:send(res)
@@ -756,8 +756,8 @@ local function debugger_loop(sev, svars, sfile, sline)
     elseif command == "OVER" or command == "OUT" then
       server:send("200 OK\n")
       step_over = true
-      
-      -- OVER and OUT are very similar except for 
+
+      -- OVER and OUT are very similar except for
       -- the stack level value at which to stop
       if command == "OUT" then step_level = stack_level - 1
       else step_level = stack_level end
@@ -1022,7 +1022,7 @@ local function off()
   end
 end
 
--- Handles server debugging commands 
+-- Handles server debugging commands
 local function handle(params, client, options)
   local _, _, command = string.find(params, "^([a-z]+)")
   local file, line, watch_idx
@@ -1123,7 +1123,7 @@ local function handle(params, client, options)
         file = removebasedir(file, basedir)
       end
       client:send("DELB " .. file .. " " .. line .. "\n")
-      if client:receive() == "200 OK" then 
+      if client:receive() == "200 OK" then
         remove_breakpoint(file, line)
       else
         print("Error: breakpoint not removed")
@@ -1146,7 +1146,7 @@ local function handle(params, client, options)
     local _, _, index = string.find(params, "^[a-z]+%s+(%d+)%s*$")
     if index then
       client:send("DELW " .. index .. "\n")
-      if client:receive() == "200 OK" then 
+      if client:receive() == "200 OK" then
         watches[index] = nil
       else
         print("Error: watch expression not removed")
@@ -1157,17 +1157,17 @@ local function handle(params, client, options)
   elseif command == "delallw" then
     for index, exp in pairs(watches) do
       client:send("DELW " .. index .. "\n")
-      if client:receive() == "200 OK" then 
+      if client:receive() == "200 OK" then
         watches[index] = nil
       else
         print("Error: watch expression at index " .. index .. " [" .. exp .. "] not removed")
       end
-    end    
-  elseif command == "eval" or command == "exec" 
+    end
+  elseif command == "eval" or command == "exec"
       or command == "load" or command == "loadstring"
       or command == "reload" then
     local _, _, exp = string.find(params, "^[a-z]+%s+(.+)$")
-    if exp or (command == "reload") then 
+    if exp or (command == "reload") then
       if command == "eval" or command == "exec" then
         exp = (exp:gsub("%-%-%[(=*)%[.-%]%1%]", "") -- remove comments
                   :gsub("%-%-.-\n", " ") -- remove line comments
@@ -1267,7 +1267,7 @@ local function handle(params, client, options)
   elseif command == "listw" then
     for i, v in pairs(watches) do
       print("Watch exp. " .. i .. ": " .. v)
-    end    
+    end
   elseif command == "suspend" then
     client:send("SUSPEND\n")
   elseif command == "stack" then
