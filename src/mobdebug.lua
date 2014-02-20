@@ -599,6 +599,7 @@ local function stringify_results(status, ...)
   return pcall(mobdebug.dump, t, {sparse = false})
 end
 
+local corowrap = coroutine.wrap
 local function debugger_loop(sev, svars, sfile, sline)
   local command
   local app, osname
@@ -835,7 +836,7 @@ local function debugger_loop(sev, svars, sfile, sline)
       if stream and mode and stream == "stdout" then
         -- assign "print" in the global environment
         local default = mode == 'd'
-        genv.print = default and iobase.print or coroutine.wrap(function()
+        genv.print = default and iobase.print or corowrap(function()
           -- wrapping into coroutine.wrap protects this function from
           -- being stepped through in the debugger.
           -- don't use vararg (...) as it adds a reference for its values,
