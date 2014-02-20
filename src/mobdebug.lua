@@ -1,5 +1,5 @@
 --
--- MobDebug 0.5511
+-- MobDebug 0.5512
 -- Copyright 2011-14 Paul Kulchenko
 -- Based on RemDebug 1.0 Copyright Kepler Project 2005
 --
@@ -18,7 +18,7 @@ end)("os")
 
 local mobdebug = {
   _NAME = "mobdebug",
-  _VERSION = 0.5511,
+  _VERSION = 0.5512,
   _COPYRIGHT = "Paul Kulchenko",
   _DESCRIPTION = "Mobile Remote Debugger for the Lua programming language",
   port = os and os.getenv and tonumber(os.getenv("MOBDEBUG_PORT")) or 8172,
@@ -286,8 +286,7 @@ local function stack(start)
 
     local src = source.source
     if src:find("@") == 1 then
-      src = src:sub(2):gsub("\\", "/")
-      if src:find("%./") == 1 then src = src:sub(3) end
+      src = src:sub(2):gsub([[^\\%?\]], ""):gsub("\\", "/"):gsub("^%./", "")
     end
 
     table.insert(stack, { -- remove basedir from source
@@ -502,7 +501,8 @@ local function debug_hook(event, line)
       -- what is the filename and what is the source code.
       -- The following will work if the supplied filename uses Unix path.
       if file:find("^@") then
-        file = file:gsub("^@", ""):gsub("\\", "/")
+        -- strip \\?\ prefix if provided
+        file = file:sub(2):gsub([[^\\%?\]], ""):gsub("\\", "/")
         -- need this conversion to be applied to relative and absolute
         -- file names as you may write "require 'Foo'" to
         -- load "foo.lua" (on a case insensitive file system) and breakpoints
