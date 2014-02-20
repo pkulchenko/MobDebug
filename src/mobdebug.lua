@@ -1428,16 +1428,23 @@ local function listen(host, port)
   end
 end
 
-local cocreate
-local function coro()
-  if cocreate then return end -- only set once
-  cocreate = cocreate or coroutine.create
-  coroutine.create = function(f, ...)
-    return cocreate(function(...)
+local function corostub(stub)
+  return function(f, ...)
+    return stub(function(...)
       require("mobdebug").on()
       return f(...)
     end, ...)
   end
+end
+
+local cocreate, cowrap
+local function coro(set)
+  if set == nil and cocreate then return end -- only set once
+  cocreate, cowrap = cocreate or coroutine.create, cowrap or coroutine.wrap
+
+  if set == true then return corostub(cocreate), corostub(cowrap) end
+  if set == false then return cocreate, cowrap end
+  coroutine.create, coroutine.wrap = corostub(cocreate), corostub(cowrap)
 end
 
 local moconew
