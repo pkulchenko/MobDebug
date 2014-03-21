@@ -1,5 +1,5 @@
 --
--- MobDebug 0.552
+-- MobDebug 0.5521
 -- Copyright 2011-14 Paul Kulchenko
 -- Based on RemDebug 1.0 Copyright Kepler Project 2005
 --
@@ -18,7 +18,7 @@ end)("os")
 
 local mobdebug = {
   _NAME = "mobdebug",
-  _VERSION = 0.552,
+  _VERSION = 0.5521,
   _COPYRIGHT = "Paul Kulchenko",
   _DESCRIPTION = "Mobile Remote Debugger for the Lua programming language",
   port = os and os.getenv and tonumber(os.getenv("MOBDEBUG_PORT")) or 8172,
@@ -1472,7 +1472,7 @@ local function coro()
   cocreate = cocreate or coroutine.create
   coroutine.create = function(f, ...)
     return cocreate(function(...)
-      require("mobdebug").on()
+      mobdebug.on()
       return f(...)
     end, ...)
   end
@@ -1491,7 +1491,7 @@ local function moai()
     local patched = mt.run
     mt.run = function(self, f, ...)
       return patched(self,  function(...)
-        require("mobdebug").on()
+        mobdebug.on()
         return f(...)
       end, ...)
     end
