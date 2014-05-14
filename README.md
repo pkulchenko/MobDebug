@@ -12,7 +12,7 @@ extends it in several ways:
 
 * fixed several existing bugs;
 * removed dependency on LuaFileSystem;
-* added new commands: LOAD, RELOAD, OUT, STACK;
+* added new commands: LOAD, RELOAD, OUT, STACK, DONE;
 * added support for debugging wxwidgets applications;
 * added ability to pause and abort running applications;
 * added pretty printing and handling of multiple results in EXEC;
@@ -55,6 +55,19 @@ Paul Kulchenko (paul@kulchenko.com)
 See LICENSE file
 
 ## History
+
+### v0.56 (May 11 2014)
+  - Added `pause` method to suspend debugging from the application.
+  - Added DONE command to stop debugging and continue execution.
+  - Updated handling of `os.getenv` that may return multiple values (fixes #13).
+  - Updated coroutine debugging to avoid using `require` calls.
+  - Added support for setting/deleting breakpoints at run-time.
+  - Added number conversion for MOBDEBUG_PORT.
+  - Added check for loading 'os' module that may be absent on some systems.
+  - Updated Serpent (0.272) to fix array indexes serialization.
+  - Added closing Lua state during os.exit() for Lua 5.2+ (closes #11).
+  - explicit load Lua standart library (thanks to Alexey Melnichuk)
+  - Added explicit loading of `table` table (fixes #9).
 
 ### v0.55 (Dec 14 2013)
   - Added `setbreakpoint` and `removebreakpoint` public methods (closes #8).
