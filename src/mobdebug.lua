@@ -1,5 +1,5 @@
 --
--- MobDebug 0.562
+-- MobDebug 0.563
 -- Copyright 2011-14 Paul Kulchenko
 -- Based on RemDebug 1.0 Copyright Kepler Project 2005
 --
@@ -18,7 +18,7 @@ end)("os")
 
 local mobdebug = {
   _NAME = "mobdebug",
-  _VERSION = 0.562,
+  _VERSION = 0.563,
   _COPYRIGHT = "Paul Kulchenko",
   _DESCRIPTION = "Mobile Remote Debugger for the Lua programming language",
   port = os and os.getenv and tonumber((os.getenv("MOBDEBUG_PORT"))) or 8172,
@@ -560,14 +560,19 @@ local function debug_hook(event, line)
         -- set on foo.lua will not work if not converted to the same case.
         if iscasepreserving then file = string.lower(file) end
         if file:find("%./") == 1 then file = file:sub(3)
-        else file = file:gsub('^'..q(basedir), '') end
+        else file = file:gsub("^"..q(basedir), "") end
         -- some file systems allow newlines in file names; remove these.
         file = file:gsub("\n", ' ')
       else
         -- this is either a file name coming from loadstring("chunk", "file"),
         -- or the actual source code that needs to be serialized (as it may
         -- include newlines); assume it's a file name if it's all on one line.
-        file = file:find("[\r\n]") and mobdebug.line(file) or file
+        if file:find("[\r\n]") then
+          file = mobdebug.line(file)
+        else
+          if iscasepreserving then file = string.lower(file) end
+          file = file:gsub("\\", "/"):gsub(file:find("^%./") and "^%./" or "^"..q(basedir), "")
+        end
       end
 
       -- set to true if we got here; this only needs to be done once per
