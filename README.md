@@ -43,7 +43,7 @@ See examples/README and examples/*.lua for examples of how to use the module.
 
 ## Dependencies
 
-MobDebug depends on LuaSocket 2.0 and has been tested with Lua 5.1 and Lua 5.2.
+MobDebug depends on LuaSocket 2.0+ and has been tested with Lua 5.1 and Lua 5.2.
 MobDebug also works with LuaJIT v2.0; using `loop` and `scratchpad` methods requires v2.0.1.
 
 ## Author
@@ -66,7 +66,7 @@ See LICENSE file
   - Added check for loading 'os' module that may be absent on some systems.
   - Updated Serpent (0.272) to fix array indexes serialization.
   - Added closing Lua state during os.exit() for Lua 5.2+ (closes #11).
-  - explicit load Lua standart library (thanks to Alexey Melnichuk)
+  - explicit load Lua standard library (thanks to Alexey Melnichuk)
   - Added explicit loading of `table` table (fixes #9).
 
 ### v0.55 (Dec 14 2013)
