@@ -1,5 +1,5 @@
 --
--- MobDebug 0.563
+-- MobDebug 0.5631
 -- Copyright 2011-14 Paul Kulchenko
 -- Based on RemDebug 1.0 Copyright Kepler Project 2005
 --
@@ -18,7 +18,7 @@ end)("os")
 
 local mobdebug = {
   _NAME = "mobdebug",
-  _VERSION = 0.563,
+  _VERSION = 0.5631,
   _COPYRIGHT = "Paul Kulchenko",
   _DESCRIPTION = "Mobile Remote Debugger for the Lua programming language",
   port = os and os.getenv and tonumber((os.getenv("MOBDEBUG_PORT"))) or 8172,
@@ -455,7 +455,7 @@ local function handle_breakpoint(peer)
   buf = buf .. readnext(peer, 5-#buf)
   if buf ~= 'SETB ' and buf ~= 'DELB ' then return end
 
-  res, err, partial = peer:receive() -- get the rest of the line; blocking
+  local res, _, partial = peer:receive() -- get the rest of the line; blocking
   if not res then
     if partial then buf = buf .. partial end
     return
@@ -1120,7 +1120,7 @@ local function off()
   -- if not, turn the debugging off
   if jit then
     local remove = true
-    for co, debugged in pairs(coroutines) do
+    for _, debugged in pairs(coroutines) do
       if debugged then remove = false; break end
     end
     if remove then debug.sethook() end
