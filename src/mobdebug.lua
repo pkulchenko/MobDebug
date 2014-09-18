@@ -1,5 +1,5 @@
 --
--- MobDebug 0.605
+-- MobDebug 0.606
 -- Copyright 2011-14 Paul Kulchenko
 -- Based on RemDebug 1.0 Copyright Kepler Project 2005
 --
@@ -19,7 +19,7 @@ end)("os")
 
 local mobdebug = {
   _NAME = "mobdebug",
-  _VERSION = 0.605,
+  _VERSION = 0.606,
   _COPYRIGHT = "Paul Kulchenko",
   _DESCRIPTION = "Mobile Remote Debugger for the Lua programming language",
   port = os and os.getenv and tonumber((os.getenv("MOBDEBUG_PORT"))) or 8172,
@@ -1076,6 +1076,8 @@ local function controller(controller_host, controller_port, scratchpad)
           -- err is not necessarily a string, so convert to string to report
           report(debug.traceback(coro_debugee), tostring(err))
           if exitonerror then break end
+          -- check if the debugging is done (coro_debugger is nil)
+          if not coro_debugger then break end
           -- resume once more to clear the response the debugger wants to send
           -- need to use capture_vars(2) as three would be the level of
           -- the caller for controller(), but because of the tail call,
