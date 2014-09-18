@@ -1,5 +1,5 @@
 --
--- MobDebug 0.603
+-- MobDebug 0.604
 -- Copyright 2011-14 Paul Kulchenko
 -- Based on RemDebug 1.0 Copyright Kepler Project 2005
 --
@@ -19,7 +19,7 @@ end)("os")
 
 local mobdebug = {
   _NAME = "mobdebug",
-  _VERSION = 0.603,
+  _VERSION = 0.604,
   _COPYRIGHT = "Paul Kulchenko",
   _DESCRIPTION = "Mobile Remote Debugger for the Lua programming language",
   port = os and os.getenv and tonumber((os.getenv("MOBDEBUG_PORT"))) or 8172,
@@ -731,7 +731,7 @@ local function debugger_loop(sev, svars, sfile, sline)
         elseif mobdebug.yield then mobdebug.yield()
         end
       elseif not line and err == "closed" then
-        error("Debugger connection unexpectedly closed", 0)
+        error("Debugger connection closed", 0)
       else
         -- if there is something in the pending buffer, prepend it to the line
         if buf then line = buf .. line; buf = nil end
@@ -1199,7 +1199,7 @@ local function handle(params, client, options)
     if client:receive() ~= "200 OK" then
       print("Unknown error")
       os.exit(1, true)
-      return nil, nil, "Debugger error: unexpected response after 'done'"
+      return nil, nil, "Debugger error: unexpected response after DONE"
     end
   elseif command == "setb" or command == "asetb" then
     _, _, _, file, line = string.find(params, "^([a-z]+)%s+(.-)%s+(%d+)%s*$")
@@ -1451,7 +1451,11 @@ local function handle(params, client, options)
       basedir = dir
 
       client:send("BASEDIR "..(remdir or dir).."\n")
-      local resp = client:receive()
+      local resp, err = client:receive()
+      if not resp then
+        print("Unknown error: "..err)
+        return nil, nil, "Debugger connection closed"
+      end
       local _, _, status = string.find(resp, "^(%d+)%s+%w+%s*$")
       if status == "200" then
         print("New base directory is " .. basedir)
