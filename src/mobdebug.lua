@@ -1,5 +1,5 @@
 --
--- MobDebug 0.604
+-- MobDebug 0.605
 -- Copyright 2011-14 Paul Kulchenko
 -- Based on RemDebug 1.0 Copyright Kepler Project 2005
 --
@@ -19,12 +19,13 @@ end)("os")
 
 local mobdebug = {
   _NAME = "mobdebug",
-  _VERSION = 0.604,
+  _VERSION = 0.605,
   _COPYRIGHT = "Paul Kulchenko",
   _DESCRIPTION = "Mobile Remote Debugger for the Lua programming language",
   port = os and os.getenv and tonumber((os.getenv("MOBDEBUG_PORT"))) or 8172,
   checkcount = 200,
-  yieldtimeout = 0.02,
+  yieldtimeout = 0.02, -- yield timeout (s)
+  connecttimeout = 2, -- connect timeout (s)
 }
 
 local error = error
@@ -963,7 +964,15 @@ local function debugger_loop(sev, svars, sfile, sline)
 end
 
 local function connect(controller_host, controller_port)
-  return (socket.connect4 or socket.connect)(controller_host, controller_port)
+  local sock, err = socket.tcp()
+  if not sock then return nil, err end
+
+  if sock.settimeout then sock:settimeout(mobdebug.connecttimeout) end
+  local res, err = sock:connect(controller_host, controller_port)
+  if sock.settimeout then sock:settimeout() end
+
+  if not res then return nil, err end
+  return sock
 end
 
 local lasthost, lastport
@@ -980,7 +989,7 @@ local function start(controller_host, controller_port)
   controller_port = lastport or mobdebug.port
 
   local err
-  server, err = (socket.connect4 or socket.connect)(controller_host, controller_port)
+  server, err = mobdebug.connect(controller_host, controller_port)
   if server then
     -- correct stack depth which already has some calls on it
     -- so it doesn't go into negative when those calls return
@@ -1034,7 +1043,7 @@ local function controller(controller_host, controller_port, scratchpad)
 
   local exitonerror = not scratchpad
   local err
-  server, err = (socket.connect4 or socket.connect)(controller_host, controller_port)
+  server, err = mobdebug.connect(controller_host, controller_port)
   if server then
     local function report(trace, err)
       local msg = err .. "\n" .. trace
