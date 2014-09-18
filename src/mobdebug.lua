@@ -1,5 +1,5 @@
 --
--- MobDebug 0.602
+-- MobDebug 0.603
 -- Copyright 2011-14 Paul Kulchenko
 -- Based on RemDebug 1.0 Copyright Kepler Project 2005
 --
@@ -19,7 +19,7 @@ end)("os")
 
 local mobdebug = {
   _NAME = "mobdebug",
-  _VERSION = 0.602,
+  _VERSION = 0.603,
   _COPYRIGHT = "Paul Kulchenko",
   _DESCRIPTION = "Mobile Remote Debugger for the Lua programming language",
   port = os and os.getenv and tonumber((os.getenv("MOBDEBUG_PORT"))) or 8172,
@@ -671,7 +671,7 @@ local function stringify_results(status, ...)
 end
 
 local function isrunning()
-  return coro_debugger and corostatus(coro_debugger) == 'suspended'
+  return coro_debugger and (corostatus(coro_debugger) == 'suspended' or corostatus(coro_debugger) == 'running')
 end
 
 -- this is a function that removes all hooks and closes the socket to
