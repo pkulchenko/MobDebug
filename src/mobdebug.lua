@@ -1,5 +1,5 @@
 --
--- MobDebug 0.60
+-- MobDebug 0.601
 -- Copyright 2011-14 Paul Kulchenko
 -- Based on RemDebug 1.0 Copyright Kepler Project 2005
 --
@@ -10,6 +10,7 @@ local io = io or require "io"
 local table = table or require "table"
 local string = string or require "string"
 local coroutine = coroutine or require "coroutine"
+local debug = require "debug"
 -- protect require "os" as it may fail on embedded systems without os module
 local os = os or (function(module)
   local ok, res = pcall(require, module)
@@ -18,7 +19,7 @@ end)("os")
 
 local mobdebug = {
   _NAME = "mobdebug",
-  _VERSION = 0.60,
+  _VERSION = 0.601,
   _COPYRIGHT = "Paul Kulchenko",
   _DESCRIPTION = "Mobile Remote Debugger for the Lua programming language",
   port = os and os.getenv and tonumber((os.getenv("MOBDEBUG_PORT"))) or 8172,
@@ -95,7 +96,6 @@ local iscasepreserving = win or (mac and io.open('/library') ~= nil)
 if jit and jit.off then jit.off() end
 
 local socket = require "socket"
-local debug = require "debug"
 local coro_debugger
 local coro_debugee
 local coroutines = {}; setmetatable(coroutines, {__mode = "k"}) -- "weak" keys
