@@ -1,5 +1,5 @@
 --
--- MobDebug 0.601
+-- MobDebug 0.602
 -- Copyright 2011-14 Paul Kulchenko
 -- Based on RemDebug 1.0 Copyright Kepler Project 2005
 --
@@ -19,7 +19,7 @@ end)("os")
 
 local mobdebug = {
   _NAME = "mobdebug",
-  _VERSION = 0.601,
+  _VERSION = 0.602,
   _COPYRIGHT = "Paul Kulchenko",
   _DESCRIPTION = "Mobile Remote Debugger for the Lua programming language",
   port = os and os.getenv and tonumber((os.getenv("MOBDEBUG_PORT"))) or 8172,
@@ -640,7 +640,7 @@ local function debug_hook(event, line)
     -- need to recheck once more as resume after 'stack' command may
     -- return something else (for example, 'exit'), which needs to be handled
     if status and res and res ~= 'stack' then
-      if abort == nil and res == "exit" then os.exit(1, true); return end
+      if not abort and res == "exit" then os.exit(1, true); return end
       abort = res
       -- only abort if safe; if not, there is another (earlier) check inside
       -- debug_hook, which will abort execution at the first safe opportunity
