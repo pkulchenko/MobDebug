@@ -1,5 +1,15 @@
 # MobDebug Changelog
 
+## v0.61 (Nov 23 2014)
+  - Added `basedir` method to explicitly set basedir when needed.
+  - Added connection timeout and exposed `connect` method for customization.
+  - Updated documentation for Lua 5.3 support and added features.
+  - Updated error handling when starting debugging fails due to connection error.
+  - Fixed `DONE` command to work with Lua 5.1 and 5.2 when breakpoints are set.
+  - Fixed `DONE` command when executed in scratchpad.
+  - Fixed `DONE` command to work from fragments loaded with `loop()`.
+  - Fixed references to `debug` library for environments that don't have it loaded.
+
 ## v0.60 (Aug 30 2014)
   - Added support for nginx debugging using internal coroutine API.
   - Fixed localizaton in breakpoint handling function.
