@@ -1,6 +1,6 @@
 # Project Description
 
-MobDebug is a remote debugger for Lua.
+MobDebug is a remote debugger for Lua (including Lua 5.1, Lua 5.2, Lua 5.3, and LuaJIT 2.x).
 
 ## Features
 
@@ -21,10 +21,11 @@ extends it in several ways:
 * added support for coroutine debugging (see examples/README for details);
 * added support for [Moai](http://getmoai.com/) debugging;
 * added support for [MoSync](http://mosync.com/) using [MobileLua](https://github.com/divineprog/mobilelua);
-* added support for Lua 5.2;
+* added support for Lua 5.2 and Lua 5.3;
 * added support for LuaJIT debugging (see note in Dependencies);
+* added support for nginx/OpenResty and Lapis debugging;
 * added support for cross-platform debugging (with client and server running on different platforms/filesystems);
-* tested integration with [ZeroBrane Studio IDE](http://studio.zerobrane.com/).
+* provided integration with [ZeroBrane Studio IDE](http://studio.zerobrane.com/).
 
 ## Usage
 
@@ -43,7 +44,7 @@ See examples/README and examples/*.lua for examples of how to use the module.
 
 ## Dependencies
 
-MobDebug depends on LuaSocket 2.0+ and has been tested with Lua 5.1 and Lua 5.2.
+MobDebug depends on LuaSocket 2.0+ and has been tested with Lua 5.1, Lua 5.2, and Lua 5.3 (beta version).
 MobDebug also works with LuaJIT v2.0; using `loop` and `scratchpad` methods requires v2.0.1.
 
 ## Author
