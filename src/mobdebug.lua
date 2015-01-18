@@ -798,6 +798,7 @@ local function debugger_loop(sev, svars, sfile, sline)
           status, res = stringify_results(pcall(func))
         end
         if status then
+          if mobdebug.onscratch then mobdebug.onscratch(res) end
           server:send("200 OK " .. tostring(#res) .. "\n")
           server:send(res)
         else
@@ -1638,6 +1639,7 @@ mobdebug.pause = function() step_into = true end
 mobdebug.yield = nil -- callback
 mobdebug.output = output
 mobdebug.onexit = os and os.exit or done
+mobdebug.onscratch = nil -- callback
 mobdebug.basedir = function(b) if b then basedir = b end return basedir end
 
 return mobdebug
