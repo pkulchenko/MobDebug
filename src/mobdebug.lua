@@ -62,7 +62,7 @@ local cororesume = ngx and coroutine._resume or coroutine.resume
 local coroyield = ngx and coroutine._yield or coroutine.yield
 local corostatus = ngx and coroutine._status or coroutine.status
 
-if not setfenv then -- Lua 5.2
+if not setfenv then -- Lua 5.2+
   -- based on http://lua-users.org/lists/lua-l/2010-06/msg00314.html
   -- this assumes f is a function
   local function findenv(f)
@@ -127,7 +127,7 @@ end
 local function q(s) return s:gsub('([%(%)%.%%%+%-%*%?%[%^%$%]])','%%%1') end
 
 local serpent = (function() ---- include Serpent module for serialization
-local n, v = "serpent", 0.273 -- (C) 2012-13 Paul Kulchenko; MIT License
+local n, v = "serpent", 0.28 -- (C) 2012-15 Paul Kulchenko; MIT License
 local c, d = "Paul Kulchenko", "Lua serializer and pretty printer"
 local snum = {[tostring(1/0)]='1/0 --[[math.huge]]',[tostring(-1/0)]='-1/0 --[[-math.huge]]',[tostring(0/0)]='0/0'}
 local badtype = {thread = true, userdata = true, cdata = true}
@@ -147,8 +147,8 @@ local function s(t, opts)
   local seen, sref, syms, symn = {}, {'local '..iname..'={}'}, {}, 0
   local function gensym(val) return '_'..(tostring(tostring(val)):gsub("[^%w]",""):gsub("(%d%w+)",
     -- tostring(val) is needed because __tostring may return a non-string value
-    function(s) if not syms[s] then symn = symn+1; syms[s] = symn end return syms[s] end)) end
-  local function safestr(s) return type(s) == "number" and (huge and snum[tostring(s)] or s)
+    function(s) if not syms[s] then symn = symn+1; syms[s] = symn end return tostring(syms[s]) end)) end
+  local function safestr(s) return type(s) == "number" and tostring(huge and snum[tostring(s)] or s)
     or type(s) ~= "string" and tostring(s) -- escape NEWLINE/010 and EOF/026
     or ("%q"):format(s):gsub("\010","n"):gsub("\026","\\026") end
   local function comment(s,l) return comm and (l or 0) < comm and ' --[['..tostring(s)..']]' or '' end
@@ -161,7 +161,7 @@ local function s(t, opts)
     return (path or '')..(plain and path and '.' or '')..safe, safe end
   local alphanumsort = type(opts.sortkeys) == 'function' and opts.sortkeys or function(k, o, n) -- k=keys, o=originaltable, n=padding
     local maxn, to = tonumber(n) or 12, {number = 'a', string = 'b'}
-    local function padnum(d) return ("%0"..maxn.."d"):format(d) end
+    local function padnum(d) return ("%0"..tostring(maxn).."d"):format(tonumber(d)) end
     table.sort(k, function(a,b)
       -- sort numeric keys first: k[key] is not nil for numerical keys
       return (k[a] ~= nil and 0 or to[type(a)] or 'z')..(tostring(a):gsub("%d+",padnum))
@@ -233,20 +233,16 @@ local function s(t, opts)
 end
 
 local function deserialize(data, opts)
-  local f, res = (loadstring or load)('return '..data)
-  if not f then f, res = (loadstring or load)(data) end
+  local env = (opts and opts.safe == false) and G
+    or setmetatable({}, {
+        __index = function(t,k) return t end,
+        __call = function(t,...) error("cannot call functions") end
+      })
+  local f, res = (loadstring or load)('return '..data, nil, nil, env)
+  if not f then f, res = (loadstring or load)(data, nil, nil, env) end
   if not f then return f, res end
-  if opts and opts.safe == false then return pcall(f) end
-
-  local count, thread = 0, coroutine.running()
-  local h, m, c = debug.gethook(thread)
-  debug.sethook(function (e, l) count = count + 1
-    if count >= 3 then error("cannot call functions") end
-  end, "c")
-  local res = {pcall(f)}
-  count = 0 -- set again, otherwise it's tripped on the next sethook
-  debug.sethook(thread, h, m, c)
-  return (table.unpack or unpack)(res)
+  if setfenv then setfenv(f, env) end
+  return pcall(f)
 end
 
 local function merge(a, b) if b then for k,v in pairs(b) do a[k] = v end end; return a; end
