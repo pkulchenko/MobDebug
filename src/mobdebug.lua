@@ -19,7 +19,7 @@ end)("os")
 
 local mobdebug = {
   _NAME = "mobdebug",
-  _VERSION = 0.612,
+  _VERSION = 0.613,
   _COPYRIGHT = "Paul Kulchenko",
   _DESCRIPTION = "Mobile Remote Debugger for the Lua programming language",
   port = os and os.getenv and tonumber((os.getenv("MOBDEBUG_PORT"))) or 8172,
@@ -323,6 +323,7 @@ end
 
 local function remove_breakpoint(file, line)
   if file == '-' and lastfile then file = lastfile
+  elseif file == '*' and line == 0 then breakpoints = {}
   elseif iscasepreserving then file = string.lower(file) end
   if breakpoints[line] then breakpoints[line][file] = nil end
 end
@@ -1267,15 +1268,12 @@ local function handle(params, client, options)
       print("Invalid command")
     end
   elseif command == "delallb" then
-    for line, breaks in pairs(breakpoints) do
-      for file, _ in pairs(breaks) do
-        client:send("DELB " .. file .. " " .. line .. "\n")
-        if client:receive() == "200 OK" then
-          remove_breakpoint(file, line)
-        else
-          print("Error: breakpoint at file " .. file .. " line " .. line .. " not removed")
-        end
-      end
+    local file, line = "*", 0
+    client:send("DELB " .. file .. " " .. tostring(line) .. "\n")
+    if client:receive() == "200 OK" then
+      remove_breakpoint(file, line)
+    else
+      print("Error: all breakpoints not removed")
     end
   elseif command == "delw" then
     local _, _, index = string.find(params, "^[a-z]+%s+(%d+)%s*$")
