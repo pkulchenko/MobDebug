@@ -22,6 +22,10 @@ local commands = {
   'exec tab = old_tab', 'eval tab.foo', 'run',
   'eval tab.foo', 'delb auto\\test.lua 15', -- this removes breakpoint set with "setb - 15"
   'setw tab.foo == 32',
+  'stack',
+  'basedir foo', -- set `foo` as the current basedir
+  'basedir',
+  'output stdout c', -- copy print output
   'run', 'eval tab.foo', 'delw 1', 'run'
 }
 
