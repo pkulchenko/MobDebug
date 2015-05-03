@@ -1,5 +1,13 @@
 # MobDebug Changelog
 
+## v0.62 (May 2 2015)
+  - Added variable arguments (vararg) to the stack trace.
+  - Updated examples to add `stack`, `basedir`, and `output` commands (closes #15).
+  - Updated removing breakpoints to remove all after `DELALLB` command.
+  - Upgraded Serpent to 0.28 with more `tostring` processing (thanks to @andrewstarks).
+  - Added explicit `tostring` for Lua 5.3 with `LUA_NOCVTN2S` set (pkulchenko/ZeroBraneStudio#401).
+  - Extended check for `mobdebug.loadstring` result (pkulchenko/ZeroBraneStudio#387).
+
 ## v0.61 (Nov 23 2014)
   - Added `basedir` method to explicitly set basedir when needed.
   - Added connection timeout and exposed `connect` method for customization.
