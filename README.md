@@ -45,7 +45,7 @@ See examples/README and examples/*.lua for examples of how to use the module.
 
 ## Dependencies
 
-MobDebug depends on LuaSocket 2.0+ and has been tested with Lua 5.1, Lua 5.2, and Lua 5.3 (beta version).
+MobDebug depends on LuaSocket 2.0+ and has been tested with Lua 5.1, Lua 5.2, and Lua 5.3.
 MobDebug also works with LuaJIT v2.0; using `loop` and `scratchpad` methods requires v2.0.1.
 
 ## Author
