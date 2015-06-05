@@ -19,7 +19,7 @@ end)("os")
 
 local mobdebug = {
   _NAME = "mobdebug",
-  _VERSION = 0.62,
+  _VERSION = 0.621,
   _COPYRIGHT = "Paul Kulchenko",
   _DESCRIPTION = "Mobile Remote Debugger for the Lua programming language",
   port = os and os.getenv and tonumber((os.getenv("MOBDEBUG_PORT"))) or 8172,
@@ -61,6 +61,7 @@ local corocreate = ngx and coroutine._create or coroutine.create
 local cororesume = ngx and coroutine._resume or coroutine.resume
 local coroyield = ngx and coroutine._yield or coroutine.yield
 local corostatus = ngx and coroutine._status or coroutine.status
+local corowrap = coroutine.wrap
 
 if not setfenv then -- Lua 5.2+
   -- based on http://lua-users.org/lists/lua-l/2010-06/msg00314.html
@@ -945,7 +946,7 @@ local function debugger_loop(sev, svars, sfile, sline)
       if stream and mode and stream == "stdout" then
         -- assign "print" in the global environment
         local default = mode == 'd'
-        genv.print = default and iobase.print or coroutine.wrap(function()
+        genv.print = default and iobase.print or corowrap(function()
           -- wrapping into coroutine.wrap protects this function from
           -- being stepped through in the debugger.
           -- don't use vararg (...) as it adds a reference for its values,
