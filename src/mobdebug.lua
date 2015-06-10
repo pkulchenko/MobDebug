@@ -19,7 +19,7 @@ end)("os")
 
 local mobdebug = {
   _NAME = "mobdebug",
-  _VERSION = 0.621,
+  _VERSION = 0.622,
   _COPYRIGHT = "Paul Kulchenko",
   _DESCRIPTION = "Mobile Remote Debugger for the Lua programming language",
   port = os and os.getenv and tonumber((os.getenv("MOBDEBUG_PORT"))) or 8172,
@@ -917,7 +917,6 @@ local function debugger_loop(sev, svars, sfile, sline)
     elseif command == "SUSPEND" then
       -- do nothing; it already fulfilled its role
     elseif command == "DONE" then
-      server:send("200 OK\n")
       coroyield("done")
       return -- done with all the debugging
     elseif command == "STACK" then
@@ -1218,11 +1217,7 @@ local function handle(params, client, options)
     end
   elseif command == "done" then
     client:send(string.upper(command) .. "\n")
-    if client:receive() ~= "200 OK" then
-      print("Unknown error")
-      os.exit(1, true)
-      return nil, nil, "Debugger error: unexpected response after DONE"
-    end
+    -- no response is expected
   elseif command == "setb" or command == "asetb" then
     _, _, _, file, line = string.find(params, "^([a-z]+)%s+(.-)%s+(%d+)%s*$")
     if file and line then
