@@ -19,7 +19,7 @@ end)("os")
 
 local mobdebug = {
   _NAME = "mobdebug",
-  _VERSION = 0.622,
+  _VERSION = 0.623,
   _COPYRIGHT = "Paul Kulchenko",
   _DESCRIPTION = "Mobile Remote Debugger for the Lua programming language",
   port = os and os.getenv and tonumber((os.getenv("MOBDEBUG_PORT"))) or 8172,
@@ -37,6 +37,7 @@ local setmetatable = setmetatable
 local tonumber = tonumber
 local unpack = table.unpack or unpack
 local rawget = rawget
+local gsub, sub, find = string.gsub, string.sub, string.find
 
 -- if strict.lua is used, then need to avoid referencing some global
 -- variables, as they can be undefined;
@@ -574,26 +575,26 @@ local function debug_hook(event, line)
       -- Unfortunately, there is no reliable/quick way to figure out
       -- what is the filename and what is the source code.
       -- The following will work if the supplied filename uses Unix path.
-      if file:find("^@") then
-        file = file:gsub("^@", ""):gsub("\\", "/")
+      if find(file, "^@") then
+        file = gsub(gsub(file, "^@", ""), "\\", "/")
         -- need this conversion to be applied to relative and absolute
         -- file names as you may write "require 'Foo'" to
         -- load "foo.lua" (on a case insensitive file system) and breakpoints
         -- set on foo.lua will not work if not converted to the same case.
         if iscasepreserving then file = string.lower(file) end
-        if file:find("%./") == 1 then file = file:sub(3)
-        else file = file:gsub("^"..q(basedir), "") end
+        if find(file, "%./") == 1 then file = sub(file, 3)
+        else file = gsub(file, "^"..q(basedir), "") end
         -- some file systems allow newlines in file names; remove these.
-        file = file:gsub("\n", ' ')
+        file = gsub(file, "\n", ' ')
       else
         -- this is either a file name coming from loadstring("chunk", "file"),
         -- or the actual source code that needs to be serialized (as it may
         -- include newlines); assume it's a file name if it's all on one line.
-        if file:find("[\r\n]") then
+        if find(file, "[\r\n]") then
           file = mobdebug.line(file)
         else
           if iscasepreserving then file = string.lower(file) end
-          file = file:gsub("\\", "/"):gsub(file:find("^%./") and "^%./" or "^"..q(basedir), "")
+          file = gsub(gsub(file, "\\", "/"), find(file, "^%./") and "^%./" or "^"..q(basedir), "")
         end
       end
 
