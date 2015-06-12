@@ -19,7 +19,7 @@ end)("os")
 
 local mobdebug = {
   _NAME = "mobdebug",
-  _VERSION = 0.624,
+  _VERSION = 0.625,
   _COPYRIGHT = "Paul Kulchenko",
   _DESCRIPTION = "Mobile Remote Debugger for the Lua programming language",
   port = os and os.getenv and tonumber((os.getenv("MOBDEBUG_PORT"))) or 8172,
@@ -1603,9 +1603,5 @@ mobdebug.done = done
 mobdebug.pause = function() step_into = true end
 mobdebug.yield = nil -- callback
 mobdebug.basedir = function(b) if b then basedir = b end return basedir end
-
--- this is needed to make "require 'modebug'" to work when mobdebug
--- module is loaded manually
-package.loaded.mobdebug = mobdebug
 
 return mobdebug
