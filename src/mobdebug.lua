@@ -19,7 +19,7 @@ end)("os")
 
 local mobdebug = {
   _NAME = "mobdebug",
-  _VERSION = 0.625,
+  _VERSION = 0.626,
   _COPYRIGHT = "Paul Kulchenko",
   _DESCRIPTION = "Mobile Remote Debugger for the Lua programming language",
   port = os and os.getenv and tonumber((os.getenv("MOBDEBUG_PORT"))) or 8172,
@@ -654,7 +654,7 @@ local function debug_hook(event, line)
     -- need to recheck once more as resume after 'stack' command may
     -- return something else (for example, 'exit'), which needs to be handled
     if status and res and res ~= 'stack' then
-      if not abort and res == "exit" then os.exit(1, true); return end
+      if not abort and res == "exit" then mobdebug.onexit(1, true); return end
       if not abort and res == "done" then mobdebug.done(); return end
       abort = res
       -- only abort if safe; if not, there is another (earlier) check inside
@@ -1179,8 +1179,7 @@ local function handle(params, client, options)
       local breakpoint = client:receive()
       if not breakpoint then
         print("Program finished")
-        os.exit(0, true)
-        return -- use return here for those cases where os.exit() is not wanted
+        return
       end
       local _, _, status = string.find(breakpoint, "^(%d+)")
       if status == "200" then
@@ -1209,13 +1208,10 @@ local function handle(params, client, options)
         if size then
           local msg = client:receive(tonumber(size))
           print("Error in remote application: " .. msg)
-          os.exit(1, true)
-          return nil, nil, msg -- use return here for those cases where os.exit() is not wanted
+          return nil, nil, msg
         end
       else
         print("Unknown error")
-        os.exit(1, true)
-        -- use return here for those cases where os.exit() is not wanted
         return nil, nil, "Debugger error: unexpected response '" .. breakpoint .. "'"
       end
       if done then break end
@@ -1509,7 +1505,9 @@ local function handle(params, client, options)
     print("exit                  -- exits debugger and the application")
   else
     local _, _, spaces = string.find(params, "^(%s*)$")
-    if not spaces then
+    if spaces then
+      return nil, nil, "Empty command"
+    else
       print("Invalid command")
       return nil, nil, "Invalid command"
     end
@@ -1548,9 +1546,11 @@ local function listen(host, port)
 
   while true do
     io.write("> ")
-    local line = io.read("*line")
-    handle(line, client)
+    local file, line, err = handle(io.read("*line"), client)
+    if not file and not err then break end -- completed debugging
   end
+
+  client:close()
 end
 
 local cocreate
@@ -1602,6 +1602,7 @@ mobdebug.coro = coro
 mobdebug.done = done
 mobdebug.pause = function() step_into = true end
 mobdebug.yield = nil -- callback
+mobdebug.onexit = os and os.exit or done
 mobdebug.basedir = function(b) if b then basedir = b end return basedir end
 
 return mobdebug
