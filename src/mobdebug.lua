@@ -19,7 +19,7 @@ end)("os")
 
 local mobdebug = {
   _NAME = "mobdebug",
-  _VERSION = 0.626,
+  _VERSION = 0.627,
   _COPYRIGHT = "Paul Kulchenko",
   _DESCRIPTION = "Mobile Remote Debugger for the Lua programming language",
   port = os and os.getenv and tonumber((os.getenv("MOBDEBUG_PORT"))) or 8172,
@@ -126,7 +126,7 @@ local debugee = function ()
   for _ = 1, 10 do a = a + 1 end
   error(deferror)
 end
-local function q(s) return s:gsub('([%(%)%.%%%+%-%*%?%[%^%$%]])','%%%1') end
+local function q(s) return string.gsub(s, '([%(%)%.%%%+%-%*%?%[%^%$%]])','%%%1') end
 
 local serpent = (function() ---- include Serpent module for serialization
 local n, v = "serpent", 0.284 -- (C) 2012-15 Paul Kulchenko; MIT License
@@ -1086,7 +1086,7 @@ local function controller(controller_host, controller_port, scratchpad)
       else
         if status then -- normal execution is done
           break
-        elseif err and not tostring(err):find(deferror) then
+        elseif err and not string.find(tostring(err), deferror) then
           -- report the error back
           -- err is not necessarily a string, so convert to string to report
           report(debug.traceback(coro_debugee), tostring(err))
