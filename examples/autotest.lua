@@ -2,7 +2,7 @@ local mobdebug = require "mobdebug"
 local socket = require "socket"
 local server = socket.bind('*', 8172)
 
-realprint = print
+local realprint = print
 -- uncomment the next line if you ONLY want too see debug output
 -- _G.print = function () end
 
@@ -36,7 +36,7 @@ local test = 0
 local curfile, curline = '', ''
 while #commands > 0 do
   local command = table.remove(commands, 1)
-  local expected
+  local expected, msg
   if type(command) == 'table' then
     command, expected, msg = command[1], command[2], (command[3] or '')
   end  
