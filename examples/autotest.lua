@@ -13,15 +13,18 @@ local client = server:accept()
 
 local commands = {
   'load auto/test.lua', -- load Lua script and start debugger
-  'over', 'over', 'step', 'over', 'setb - 15', 'run', 
+  'over', 'over', 'step', 'over', 'setb auto/test.lua 15', 'run',
   'reload', -- reload the same script; breakpoints/watches still stay
   'run',
   {'eval tab.foo', 2, "this should fail"}, -- should display "not ok"
   {'eval tab.bar', 2, "this should work"}, -- should display "ok"
   'exec old_tab = tab', 'exec tab = 2', 'eval tab',
   'exec tab = old_tab', 'eval tab.foo', 'run',
-  'eval tab.foo', 'delb auto\\test.lua 15', -- this removes breakpoint set with "setb - 15"
+  'eval tab.foo',
+  'listb',
+  'delb auto\\test.lua 15', -- this removes breakpoint set with "setb - 15"
   'setw tab.foo == 32',
+  'listw',
   'stack',
   'basedir foo', -- set `foo` as the current basedir
   'basedir',
@@ -31,7 +34,7 @@ local commands = {
 
 local test = 0
 local curfile, curline = '', ''
-while #commands do
+while #commands > 0 do
   local command = table.remove(commands, 1)
   local expected
   if type(command) == 'table' then
