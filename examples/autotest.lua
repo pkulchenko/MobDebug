@@ -3,7 +3,7 @@ local socket = require "socket"
 local server = socket.bind('*', 8172)
 
 local realprint = print
--- uncomment the next line if you ONLY want too see debug output
+-- uncomment the next line if you ONLY want to see debug output
 -- _G.print = function () end
 
 print("Lua Remote Debugger")
