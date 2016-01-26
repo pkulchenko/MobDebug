@@ -1,5 +1,17 @@
 # MobDebug Changelog
 
+## v0.63 (Jan 25 2016)
+  - Added localization for `coroutine.wrap` call to allow modification (closes #17).
+  - Added `onexit` callback and removed `os.exit` calls from the controller (#19).
+  - Removed explicit assignment to `loaded` as this can be done only as needed (#23).
+  - Switched to using `string.*` methods to avoid string metamethods in the debug hook.
+  - Updated check for session completion to avoid early exit from debugging server (closes #24).
+  - Updated tests to add `listw` and `listb` commands.
+  - Upgraded Serpent (0.285) to add `keyignore` option.
+  - Upgraded Serpent to add numerical format fix and `__tostring` protection.
+  - Updated `DONE` response to allow for async processing (#19).
+  - Updated information on Lua 5.3 in README.
+
 ## v0.62 (May 2 2015)
   - Added variable arguments (vararg) to the stack trace.
   - Updated examples to add `stack`, `basedir`, and `output` commands (closes #15).
