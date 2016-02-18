@@ -19,7 +19,7 @@ end)("os")
 
 local mobdebug = {
   _NAME = "mobdebug",
-  _VERSION = 0.63,
+  _VERSION = 0.631,
   _COPYRIGHT = "Paul Kulchenko",
   _DESCRIPTION = "Mobile Remote Debugger for the Lua programming language",
   port = os and os.getenv and tonumber((os.getenv("MOBDEBUG_PORT"))) or 8172,
@@ -292,14 +292,15 @@ local function stack(start)
     i = 1
     while true do
       local name, value = debug.getlocal(f, -i)
-      if not name then break end
+      -- `not name` should be enough, but LuaJIT 2.0.0 incorrectly reports `(*temporary)` names here
+      if not name or name ~= "(*vararg)" then break end
       locals[name:gsub("%)$"," "..i..")")] = {value, tostring(value)}
       i = i + 1
     end
     -- get upvalues
     i = 1
     local ups = {}
-    while func and true do -- check for func as it may be nil for tail calls
+    while func do -- check for func as it may be nil for tail calls
       local name, value = debug.getupvalue(func, i)
       if not name then break end
       ups[name] = {value, tostring(value)}
