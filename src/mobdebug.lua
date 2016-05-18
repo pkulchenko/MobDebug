@@ -19,7 +19,7 @@ end)("os")
 
 local mobdebug = {
   _NAME = "mobdebug",
-  _VERSION = "0.636",
+  _VERSION = "0.637",
   _COPYRIGHT = "Paul Kulchenko",
   _DESCRIPTION = "Mobile Remote Debugger for the Lua programming language",
   port = os and os.getenv and tonumber((os.getenv("MOBDEBUG_PORT"))) or 8172,
@@ -596,15 +596,15 @@ local function debug_hook(event, line)
       -- for example when they call loadstring('...', 'filename.lua').
       -- Unfortunately, there is no reliable/quick way to figure out
       -- what is the filename and what is the source code.
-      -- The following will work if the supplied filename uses Unix path.
-      if find(file, "^@") then
+      -- If the name doesn't start with `@`, assume it's a file name if it's all on one line.
+      if find(file, "^@") or not find(file, "[\r\n]") then
         file = gsub(gsub(file, "^@", ""), "\\", "/")
         -- normalize paths that may include up-dir or same-dir references
         -- if the path starts from the up-dir or reference,
         -- prepend `basedir` to generate absolute path to keep breakpoints working.
         -- ignore qualified relative path (`D:../`) and UNC paths (`\\?\`)
-        if file:find("^%.%./") then file = basedir..file end
-        if file:find("/%.%.?/") then file = normalize_path(file) end
+        if find(file, "^%.%./") then file = basedir..file end
+        if find(file, "/%.%.?/") then file = normalize_path(file) end
         -- need this conversion to be applied to relative and absolute
         -- file names as you may write "require 'Foo'" to
         -- load "foo.lua" (on a case insensitive file system) and breakpoints
@@ -615,15 +615,7 @@ local function debug_hook(event, line)
         -- some file systems allow newlines in file names; remove these.
         file = gsub(file, "\n", ' ')
       else
-        -- this is either a file name coming from loadstring("chunk", "file"),
-        -- or the actual source code that needs to be serialized (as it may
-        -- include newlines); assume it's a file name if it's all on one line.
-        if find(file, "[\r\n]") then
-          file = mobdebug.line(file)
-        else
-          if iscasepreserving then file = string.lower(file) end
-          file = gsub(gsub(file, "\\", "/"), find(file, "^%./") and "^%./" or "^"..q(basedir), "")
-        end
+        file = mobdebug.line(file)
       end
 
       -- set to true if we got here; this only needs to be done once per
