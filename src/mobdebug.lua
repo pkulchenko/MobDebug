@@ -19,7 +19,7 @@ end)("os")
 
 local mobdebug = {
   _NAME = "mobdebug",
-  _VERSION = "0.637",
+  _VERSION = "0.6371",
   _COPYRIGHT = "Paul Kulchenko",
   _DESCRIPTION = "Mobile Remote Debugger for the Lua programming language",
   port = os and os.getenv and tonumber((os.getenv("MOBDEBUG_PORT"))) or 8172,
@@ -28,6 +28,7 @@ local mobdebug = {
   connecttimeout = 2, -- connect timeout (s)
 }
 
+local HOOKMASK = "lcr"
 local error = error
 local getfenv = getfenv
 local setfenv = setfenv
@@ -1056,7 +1057,7 @@ local function start(controller_host, controller_port)
       end
     end
     coro_debugger = corocreate(debugger_loop)
-    debug.sethook(debug_hook, "lcr")
+    debug.sethook(debug_hook, HOOKMASK)
     seen_hook = nil -- reset in case the last start() call was refused
     step_into = true -- start with step command
     return true
@@ -1096,7 +1097,7 @@ local function controller(controller_host, controller_port, scratchpad)
       if scratchpad then checkcount = mobdebug.checkcount end -- force suspend right away
 
       coro_debugee = corocreate(debugee)
-      debug.sethook(coro_debugee, debug_hook, "lcr")
+      debug.sethook(coro_debugee, debug_hook, HOOKMASK)
       local status, err = cororesume(coro_debugee, unpack(arg or {}))
 
       -- was there an error or is the script done?
@@ -1151,10 +1152,10 @@ local function on()
   if main then co = nil end
   if co then
     coroutines[co] = true
-    debug.sethook(co, debug_hook, "lcr")
+    debug.sethook(co, debug_hook, HOOKMASK)
   else
     if jit then coroutines.main = true end
-    debug.sethook(debug_hook, "lcr")
+    debug.sethook(debug_hook, HOOKMASK)
   end
 end
 
