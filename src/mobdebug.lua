@@ -28,6 +28,8 @@ local mobdebug = {
   connecttimeout = 2, -- connect timeout (s)
 }
 
+local default_options = {nocode = true, sparse = false}
+local serpent_options = {nocode = true, sparse = false}
 local HOOKMASK = "lcr"
 local error = error
 local getfenv = getfenv
@@ -954,7 +956,7 @@ local function debugger_loop(sev, svars, sfile, sline)
         server:send("401 Error in Execution " .. tostring(#vars) .. "\n")
         server:send(vars)
       else
-        local ok, res = pcall(mobdebug.dump, vars, {nocode = true, sparse = false})
+        local ok, res = pcall(mobdebug.dump, vars, serpent_options)
         if ok then
           server:send("200 OK " .. tostring(res) .. "\n")
         else
@@ -1635,5 +1637,18 @@ mobdebug.yield = nil -- callback
 mobdebug.output = output
 mobdebug.onexit = os and os.exit or done
 mobdebug.basedir = function(b) if b then basedir = b end return basedir end
+mobdebug.serpent_options = function(opt)
+  if opt == nil then return serpent_options end
+  
+  serpent_options = {}
+  for k,v in pairs(opt) do
+    serpent_options[k] = v
+  end
+  for k,v in pairs(default_options) do
+    serpent_options[k] = v
+  end
+  
+  return serpent_options
+end
 
 return mobdebug
