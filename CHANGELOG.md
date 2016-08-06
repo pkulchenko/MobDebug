@@ -1,5 +1,18 @@
 # MobDebug Changelog
 
+## v0.64 (Aug 06 2016)
+  - Add callback mobdebug.onscratch (thanks to @dodo).
+  - Added path normalization to file names that don't start with `@`.
+  - Added populating vararg (`...`) values in the main chunk during debugging.
+  - Added path normalization to handle paths with up-dir references.
+  - Added `verbose` option to the `handle` method of the debugger.
+  - Added `output` method to pass stream information back to the controller.
+  - Improved error checking after OUTPUT command.
+  - Updated to reference one source for all hook masks.
+  - Updated `output` method not to fail when debugging is not started.
+  - Updated output stream processing to allow for empty strings.
+  - Updated `vararg` stack handling to work around incorrect LuaJIT 2.0.0 values.
+
 ## v0.63 (Jan 25 2016)
   - Added localization for `coroutine.wrap` call to allow modification (closes #17).
   - Added `onexit` callback and removed `os.exit` calls from the controller (#19).
