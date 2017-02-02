@@ -19,7 +19,7 @@ end)("os")
 
 local mobdebug = {
   _NAME = "mobdebug",
-  _VERSION = "0.641",
+  _VERSION = "0.642",
   _COPYRIGHT = "Paul Kulchenko",
   _DESCRIPTION = "Mobile Remote Debugger for the Lua programming language",
   port = os and os.getenv and tonumber((os.getenv("MOBDEBUG_PORT"))) or 8172,
@@ -517,7 +517,7 @@ local function normalize_path(file)
     file, n = file:gsub("[^/]+/%.%./", "", 1)
   until n == 0
   -- there may still be a leading up-dir reference left (as `/../` or `../`); remove it
-  return (file:gsub("%.%./", "", 1))
+  return (file:gsub("^(/?)%.%./", "%1"))
 end
 
 local function debug_hook(event, line)
