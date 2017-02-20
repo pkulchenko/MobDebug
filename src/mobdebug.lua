@@ -19,7 +19,7 @@ end)("os")
 
 local mobdebug = {
   _NAME = "mobdebug",
-  _VERSION = "0.643",
+  _VERSION = "0.644",
   _COPYRIGHT = "Paul Kulchenko",
   _DESCRIPTION = "Mobile Remote Debugger for the Lua programming language",
   port = os and os.getenv and tonumber((os.getenv("MOBDEBUG_PORT"))) or 8172,
@@ -400,7 +400,7 @@ local function capture_vars(level, thread)
   local func = (thread and debug.getinfo(thread, level, "f") or debug.getinfo(level, "f") or {}).func
   if not func then return {} end
 
-  local vars = {}
+  local vars = {['...'] = {}}
   local i = 1
   while true do
     local name, value = debug.getupvalue(func, i)
@@ -418,6 +418,20 @@ local function capture_vars(level, thread)
     end
     if not name then break end
     if string.sub(name, 1, 1) ~= '(' then vars[name] = value end
+    i = i + 1
+  end
+  -- get varargs (these use negative indices)
+  i = 1
+  while true do
+    local name, value
+    if thread then
+      name, value = debug.getlocal(thread, level, -i)
+    else
+      name, value = debug.getlocal(level, -i)
+    end
+    -- `not name` should be enough, but LuaJIT 2.0.0 incorrectly reports `(*temporary)` names here
+    if not name or name ~= "(*vararg)" then break end
+    vars['...'][i] = value
     i = i + 1
   end
   -- returned 'vars' table plays a dual role: (1) it captures local values
@@ -814,8 +828,9 @@ local function debugger_loop(sev, svars, sfile, sline)
           local stack = tonumber(params.stack)
           -- if the requested stack frame is not the current one, then use a new capture
           -- with a specific stack frame: `capture_vars(0, coro_debugee)`
-          setfenv(func, stack and coro_debugee and capture_vars(stack-1, coro_debugee) or eval_env)
-          status, res = stringify_results(params, pcall(func))
+          local env = stack and coro_debugee and capture_vars(stack-1, coro_debugee) or eval_env
+          setfenv(func, env)
+          status, res = stringify_results(params, pcall(func, unpack(env['...'] or {})))
         end
         if status then
           if mobdebug.onscratch then mobdebug.onscratch(res) end
