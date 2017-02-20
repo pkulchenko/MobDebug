@@ -19,7 +19,7 @@ end)("os")
 
 local mobdebug = {
   _NAME = "mobdebug",
-  _VERSION = "0.642",
+  _VERSION = "0.643",
   _COPYRIGHT = "Paul Kulchenko",
   _DESCRIPTION = "Mobile Remote Debugger for the Lua programming language",
   port = os and os.getenv and tonumber((os.getenv("MOBDEBUG_PORT"))) or 8172,
@@ -395,9 +395,12 @@ local function restore_vars(vars)
   end
 end
 
-local function capture_vars(level)
+local function capture_vars(level, thread)
+  level = (level or 0)+2 -- add two levels for this and debug calls
+  local func = (thread and debug.getinfo(thread, level, "f") or debug.getinfo(level, "f") or {}).func
+  if not func then return {} end
+
   local vars = {}
-  local func = debug.getinfo(level or 3, "f").func
   local i = 1
   while true do
     local name, value = debug.getupvalue(func, i)
@@ -407,7 +410,12 @@ local function capture_vars(level)
   end
   i = 1
   while true do
-    local name, value = debug.getlocal(level or 3, i)
+    local name, value
+    if thread then
+      name, value = debug.getlocal(thread, level, i)
+    else
+      name, value = debug.getlocal(level, i)
+    end
     if not name then break end
     if string.sub(name, 1, 1) ~= '(' then vars[name] = value end
     i = i + 1
@@ -629,7 +637,7 @@ local function debug_hook(event, line)
 
     local vars, status, res
     if (watchescnt > 0) then
-      vars = capture_vars()
+      vars = capture_vars(1)
       for index, value in pairs(watches) do
         setfenv(value, vars)
         local ok, fired = pcall(value)
@@ -651,7 +659,7 @@ local function debug_hook(event, line)
       or is_pending(server))
 
     if getin then
-      vars = vars or capture_vars()
+      vars = vars or capture_vars(1)
       step_into = false
       step_over = false
       status, res = cororesume(coro_debugger, events.BREAK, vars, file, line)
@@ -688,12 +696,16 @@ local function debug_hook(event, line)
   end
 end
 
-local function stringify_results(status, ...)
+local function stringify_results(params, status, ...)
   if not status then return status, ... end -- on error report as it
+
+  params = params or {}
+  if params.nocode == nil then params.nocode = true end
+  if params.comment == nil then params.comment = 1 end
 
   local t = {...}
   for i,v in pairs(t) do -- stringify each of the returned values
-    local ok, res = pcall(mobdebug.line, v, {nocode = true, comment = 1})
+    local ok, res = pcall(mobdebug.line, v, params)
     t[i] = ok and res or ("%q"):format(res):gsub("\010","n"):gsub("\026","\\026")
   end
   -- stringify table with all returned values
@@ -789,13 +801,21 @@ local function debugger_loop(sev, svars, sfile, sline)
         server:send("400 Bad Request\n")
       end
     elseif command == "EXEC" then
+      -- extract any optional parameters
+      local params = string.match(line, "--%s*(%b{})%s*$")
       local _, _, chunk = string.find(line, "^[A-Z]+%s+(.+)$")
       if chunk then
         local func, res = mobdebug.loadstring(chunk)
         local status
         if func then
-          setfenv(func, eval_env)
-          status, res = stringify_results(pcall(func))
+          local pfunc = params and loadstring("return "..params) -- use internal function
+          params = pfunc and pfunc()
+          params = (type(params) == "table" and params or {})
+          local stack = tonumber(params.stack)
+          -- if the requested stack frame is not the current one, then use a new capture
+          -- with a specific stack frame: `capture_vars(0, coro_debugee)`
+          setfenv(func, stack and coro_debugee and capture_vars(stack-1, coro_debugee) or eval_env)
+          status, res = stringify_results(params, pcall(func))
         end
         if status then
           if mobdebug.onscratch then mobdebug.onscratch(res) end
@@ -1116,14 +1136,14 @@ local function controller(controller_host, controller_port, scratchpad)
           -- check if the debugging is done (coro_debugger is nil)
           if not coro_debugger then break end
           -- resume once more to clear the response the debugger wants to send
-          -- need to use capture_vars(2) as three would be the level of
-          -- the caller for controller(), but because of the tail call,
-          -- the caller may not exist;
+          -- need to use capture_vars(0) to capture only two (default) level,
+          -- as even though there is controller() call, because of the tail call,
+          -- the caller may not exist for it;
           -- This is not entirely safe as the user may see the local
           -- variable from console, but they will be reset anyway.
           -- This functionality is used when scratchpad is paused to
           -- gain access to remote console to modify global variables.
-          local status, err = cororesume(coro_debugger, events.RESTART, capture_vars(2))
+          local status, err = cororesume(coro_debugger, events.RESTART, capture_vars(0))
           if not status or status and err == "exit" then break end
         end
       end
