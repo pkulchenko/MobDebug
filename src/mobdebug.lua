@@ -19,7 +19,7 @@ end)("os")
 
 local mobdebug = {
   _NAME = "mobdebug",
-  _VERSION = "0.644",
+  _VERSION = "0.645",
   _COPYRIGHT = "Paul Kulchenko",
   _DESCRIPTION = "Mobile Remote Debugger for the Lua programming language",
   port = os and os.getenv and tonumber((os.getenv("MOBDEBUG_PORT"))) or 8172,
@@ -990,7 +990,16 @@ local function debugger_loop(sev, svars, sfile, sline)
         server:send("401 Error in Execution " .. tostring(#vars) .. "\n")
         server:send(vars)
       else
-        local ok, res = pcall(mobdebug.dump, vars, {nocode = true, sparse = false})
+        local params = string.match(line, "--%s*(%b{})%s*$")
+        local pfunc = params and loadstring("return "..params) -- use internal function
+        params = pfunc and pfunc()
+        params = (type(params) == "table" and params or {})
+        if params.nocode == nil then params.nocode = true end
+        if params.sparse == nil then params.sparse = false end
+        -- take into account additional levels for the stack frames and data management
+        if tonumber(params.maxlevel) then params.maxlevel = tonumber(params.maxlevel)+4 end
+
+        local ok, res = pcall(mobdebug.dump, vars, params)
         if ok then
           server:send("200 OK " .. tostring(res) .. "\n")
         else
@@ -1474,7 +1483,8 @@ local function handle(params, client, options)
   elseif command == "suspend" then
     client:send("SUSPEND\n")
   elseif command == "stack" then
-    client:send("STACK\n")
+    local opts = string.match(params, "^[a-z]+%s+(.+)$")
+    client:send("STACK" .. (opts and " "..opts or "") .."\n")
     local resp = client:receive()
     local _, _, status, res = string.find(resp, "^(%d+)%s+%w+%s+(.+)%s*$")
     if status == "200" then
