@@ -33,7 +33,8 @@ local error = error
 local getfenv = getfenv
 local setfenv = setfenv
 local loadstring = loadstring or load -- "load" replaced "loadstring" in Lua 5.2
-local pairs = pairs
+local next = next
+local pairs = function(t)return next,t end -- make sure __pairs can't interfere
 local setmetatable = setmetatable
 local tonumber = tonumber
 local unpack = table.unpack or unpack
@@ -135,6 +136,13 @@ local c, d = "Paul Kulchenko", "Lua serializer and pretty printer"
 local snum = {[tostring(1/0)]='1/0 --[[math.huge]]',[tostring(-1/0)]='-1/0 --[[-math.huge]]',[tostring(0/0)]='0/0'}
 local badtype = {thread = true, userdata = true, cdata = true}
 local getmetatable = debug and debug.getmetatable or getmetatable
+local oldtostring = tostring
+local function tostring( x )
+  local mt = getmetatable( x )
+  local ret = oldtostring( c )
+  setmetatable( x, mt )
+  return ret
+end
 local keyword, globals, G = {}, {}, (_G or _ENV)
 for _,k in ipairs({'and', 'break', 'do', 'else', 'elseif', 'end', 'false',
   'for', 'function', 'goto', 'if', 'in', 'local', 'nil', 'not', 'or', 'repeat',
