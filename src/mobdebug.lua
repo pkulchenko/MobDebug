@@ -1098,7 +1098,7 @@ local function start(controller_host, controller_port)
         if select('#', ...) >= 1 then
           local err, lvl = ...
           if err and type(err) ~= 'thread' then
-            local trace = dtraceback(err, (lvl or 2)+1)
+            local trace = dtraceback(err, (lvl or 1)+1)
             if genv.print == iobase.print then -- no remote redirect
               return trace
             else
