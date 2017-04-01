@@ -19,7 +19,7 @@ end)("os")
 
 local mobdebug = {
   _NAME = "mobdebug",
-  _VERSION = "0.646",
+  _VERSION = "0.647",
   _COPYRIGHT = "Paul Kulchenko",
   _DESCRIPTION = "Mobile Remote Debugger for the Lua programming language",
   port = os and os.getenv and tonumber((os.getenv("MOBDEBUG_PORT"))) or 8172,
@@ -1088,8 +1088,11 @@ local function start(controller_host, controller_port)
     -- start from 16th frame, which is sufficiently large for this check.
     stack_level = stack_depth(16)
 
-    -- provide our own traceback function to report the error remotely
-    do
+    -- provide our own traceback function to report errors remotely
+    -- but only under Lua 5.1/LuaJIT as it's not called under Lua 5.2+
+    -- (http://lua-users.org/lists/lua-l/2016-05/msg00297.html)
+    local function f() return function()end end
+    if f() ~= f() then -- Lua 5.1 or LuaJIT
       local dtraceback = debug.traceback
       debug.traceback = function (...)
         if select('#', ...) >= 1 then
