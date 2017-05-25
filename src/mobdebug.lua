@@ -136,13 +136,18 @@ local c, d = "Paul Kulchenko", "Lua serializer and pretty printer"
 local snum = {[tostring(1/0)]='1/0 --[[math.huge]]',[tostring(-1/0)]='-1/0 --[[-math.huge]]',[tostring(0/0)]='0/0'}
 local badtype = {thread = true, userdata = true, cdata = true}
 local getmetatable = debug and debug.getmetatable or getmetatable
+local type = type
 local oldtostring = tostring
 local function tostring( x )
-  local mt = getmetatable( x )
-  setmetatable( x, nil )
-  local ret = oldtostring( x )
-  setmetatable( x, mt )
-  return ret
+  if type( x ) == 'table' then
+    local mt = getmetatable( x )
+    setmetatable( x, nil )
+    local ret = oldtostring( x )
+    setmetatable( x, mt )
+    return ret
+  else
+    return oldtostring( x )
+  end
 end
 local keyword, globals, G = {}, {}, (_G or _ENV)
 for _,k in ipairs({'and', 'break', 'do', 'else', 'elseif', 'end', 'false',
