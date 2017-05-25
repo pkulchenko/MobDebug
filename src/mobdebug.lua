@@ -139,7 +139,8 @@ local getmetatable = debug and debug.getmetatable or getmetatable
 local oldtostring = tostring
 local function tostring( x )
   local mt = getmetatable( x )
-  local ret = oldtostring( c )
+  setmetatable( x, nil )
+  local ret = oldtostring( x )
   setmetatable( x, mt )
   return ret
 end
