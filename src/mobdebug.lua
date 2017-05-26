@@ -7,10 +7,37 @@
 -- use loaded modules or load explicitly on those systems that require that
 local require = require
 local io = io or require "io"
+local io_read = io.read
+local io_open = io.open
+local io_write = io.write
+
 local table = table or require "table"
+local table_sort = table.sort
+local table_concat = table.concat
+local table_insert = table.insert
+
 local string = string or require "string"
+local string_find = string.find
+local string_rep = string.rep
+local string_gsub = string.gsub
+local string_dump = string.dump
+local string_match = string.match
+local string_upper = string.upper
+local string_lower = string.lower
+local string_sub = string.sub
+
 local coroutine = coroutine or require "coroutine"
-local debug = require "debug"
+local _debug = require "debug"
+local debug_setupvalue = _debug.setupvalue
+local debug_traceback = _debug.traceback
+local debug_setlocal = _debug.setlocal
+local debug_getupvalue = _debug.getupvalue
+local debug_sethook = _debug.sethook
+local debug_getlocal = _debug.getlocal
+local debug_getinfo = _debug.getinfo
+local debug_getmetatable = _debug.getmetatable
+
+
 -- protect require "os" as it may fail on embedded systems without os module
 local os = os or (function(module)
   local ok, res = pcall(require, module)
@@ -38,7 +65,6 @@ local setmetatable = setmetatable
 local tonumber = tonumber
 local unpack = table.unpack or unpack
 local rawget = rawget
-local gsub, sub, find = string.gsub, string.sub, string.find
 
 -- if strict.lua is used, then need to avoid referencing some global
 -- variables, as they can be undefined;
@@ -71,7 +97,7 @@ if not setfenv then -- Lua 5.2+
   local function findenv(f)
     local level = 1
     repeat
-      local name, value = debug.getupvalue(f, level)
+      local name, value = debug_getupvalue(f, level)
       if name == '_ENV' then return level, value end
       level = level + 1
     until name == nil
@@ -79,7 +105,7 @@ if not setfenv then -- Lua 5.2+
   getfenv = function (f) return(select(2, findenv(f)) or _G) end
   setfenv = function (f, t)
     local level = findenv(f)
-    if level then debug.setupvalue(f, level, t) end
+    if level then debug_setupvalue(f, level, t) end
     return f end
 end
 
@@ -90,8 +116,8 @@ end
 -- OSX can be configured to be case-sensitive, so check for that. This doesn't
 -- handle the case of different partitions having different case-sensitivity.
 local win = os and os.getenv and (os.getenv('WINDIR') or (os.getenv('OS') or ''):match('[Ww]indows')) and true or false
-local mac = not win and (os and os.getenv and os.getenv('DYLD_LIBRARY_PATH') or not io.open("/proc")) and true or false
-local iscasepreserving = win or (mac and io.open('/library') ~= nil)
+local mac = not win and (os and os.getenv and os.getenv('DYLD_LIBRARY_PATH') or not io_open("/proc")) and true or false
+local iscasepreserving = win or (mac and io_open('/library') ~= nil)
 
 -- turn jit off based on Mike Pall's comment in this discussion:
 -- http://www.freelists.org/post/luajit/Debug-hooks-and-JIT,2
@@ -127,14 +153,14 @@ local debugee = function ()
   for _ = 1, 10 do a = a + 1 end
   error(deferror)
 end
-local function q(s) return string.gsub(s, '([%(%)%.%%%+%-%*%?%[%^%$%]])','%%%1') end
+local function q(s) return string_gsub(s, '([%(%)%.%%%+%-%*%?%[%^%$%]])','%%%1') end
 
 local serpent = (function() ---- include Serpent module for serialization
 local n, v = "serpent", 0.288 -- (C) 2012-17 Paul Kulchenko; MIT License
 local c, d = "Paul Kulchenko", "Lua serializer and pretty printer"
 local snum = {[tostring(1/0)]='1/0 --[[math.huge]]',[tostring(-1/0)]='-1/0 --[[-math.huge]]',[tostring(0/0)]='0/0'}
 local badtype = {thread = true, userdata = true, cdata = true}
-local getmetatable = debug and debug.getmetatable or getmetatable
+local getmetatable = debug_getmetatable or getmetatable
 local keyword, globals, G = {}, {}, (_G or _ENV)
 for _,k in ipairs({'and', 'break', 'do', 'else', 'elseif', 'end', 'false',
   'for', 'function', 'goto', 'if', 'in', 'local', 'nil', 'not', 'or', 'repeat',
@@ -168,7 +194,7 @@ local function s(t, opts)
   local alphanumsort = type(opts.sortkeys) == 'function' and opts.sortkeys or function(k, o, n) -- k=keys, o=originaltable, n=padding
     local maxn, to = tonumber(n) or 12, {number = 'a', string = 'b'}
     local function padnum(d) return ("%0"..tostring(maxn).."d"):format(tonumber(d)) end
-    table.sort(k, function(a,b)
+    table_sort(k, function(a,b)
       -- sort numeric keys first: k[key] is not nil for numerical keys
       return (k[a] ~= nil and 0 or to[type(a)] or 'z')..(tostring(a):gsub("%d+",padnum))
            < (k[b] ~= nil and 0 or to[type(b)] or 'z')..(tostring(b):gsub("%d+",padnum)) end) end
@@ -227,9 +253,9 @@ local function s(t, opts)
           end
         end
       end
-      local prefix = string.rep(indent or '', level)
+      local prefix = string_rep(indent or '', level)
       local head = indent and '{\n'..prefix..indent or '{'
-      local body = table.concat(out, ','..(indent and '\n'..prefix..indent or space))
+      local body = table_concat(out, ','..(indent and '\n'..prefix..indent or space))
       local tail = indent and "\n"..prefix..'}' or '}'
       return (custom and custom(tag,head,body,tail) or tag..head..body..tail)..comment(t, level)
     elseif badtype[ttype] then
@@ -238,14 +264,14 @@ local function s(t, opts)
     elseif ttype == 'function' then
       seen[t] = insref or spath
       if opts.nocode then return tag.."function() --[[..skipped..]] end"..comment(t, level) end
-      local ok, res = pcall(string.dump, t)
+      local ok, res = pcall(string_dump, t)
       local func = ok and "((loadstring or load)("..safestr(res)..",'@serialized'))"..comment(t, level)
       return tag..(func or globerr(t, level))
     else return tag..safestr(t) end -- handle all other types
   end
   local sepr = indent and "\n" or ";"..space
   local body = val2str(t, name, indent) -- this call also populates sref
-  local tail = #sref>1 and table.concat(sref, sepr)..sepr or ''
+  local tail = #sref>1 and table_concat(sref, sepr)..sepr or ''
   local warn = opts.comment and #sref>1 and space.."--[[incomplete output with shared/self-references skipped]]" or ''
   return not name and body..warn or "do local "..body..sepr..tail.."return "..name..sepr.."end"
 end
@@ -283,26 +309,26 @@ local function removebasedir(path, basedir)
     return path:lower():find('^'..q(basedir:lower()))
       and path:sub(#basedir+1) or path
   else
-    return string.gsub(path, '^'..q(basedir), '')
+    return string_gsub(path, '^'..q(basedir), '')
   end
 end
 
 local function stack(start)
   local function vars(f)
-    local func = debug.getinfo(f, "f").func
+    local func = debug_getinfo(f, "f").func
     local i = 1
     local locals = {}
     -- get locals
     while true do
-      local name, value = debug.getlocal(f, i)
+      local name, value = debug_getlocal(f, i)
       if not name then break end
-      if string.sub(name, 1, 1) ~= '(' then locals[name] = {value, tostring(value)} end
+      if string_sub(name, 1, 1) ~= '(' then locals[name] = {value, tostring(value)} end
       i = i + 1
     end
     -- get varargs (these use negative indices)
     i = 1
     while true do
-      local name, value = debug.getlocal(f, -i)
+      local name, value = debug_getlocal(f, -i)
       -- `not name` should be enough, but LuaJIT 2.0.0 incorrectly reports `(*temporary)` names here
       if not name or name ~= "(*vararg)" then break end
       locals[name:gsub("%)$"," "..i..")")] = {value, tostring(value)}
@@ -312,7 +338,7 @@ local function stack(start)
     i = 1
     local ups = {}
     while func do -- check for func as it may be nil for tail calls
-      local name, value = debug.getupvalue(func, i)
+      local name, value = debug_getupvalue(func, i)
       if not name then break end
       ups[name] = {value, tostring(value)}
       i = i + 1
@@ -323,7 +349,7 @@ local function stack(start)
   local stack = {}
   local linemap = mobdebug.linemap
   for i = (start or 0), 100 do
-    local source = debug.getinfo(i, "Snl")
+    local source = debug_getinfo(i, "Snl")
     if not source then break end
 
     local src = source.source
@@ -332,7 +358,7 @@ local function stack(start)
       if src:find("%./") == 1 then src = src:sub(3) end
     end
 
-    table.insert(stack, { -- remove basedir from source
+    table_insert(stack, { -- remove basedir from source
       {source.name, removebasedir(src, basedir),
        linemap and linemap(source.linedefined, source.source) or source.linedefined,
        linemap and linemap(source.currentline, source.source) or source.currentline,
@@ -345,7 +371,7 @@ end
 
 local function set_breakpoint(file, line)
   if file == '-' and lastfile then file = lastfile
-  elseif iscasepreserving then file = string.lower(file) end
+  elseif iscasepreserving then file = string_lower(file) end
   if not breakpoints[line] then breakpoints[line] = {} end
   breakpoints[line][file] = true
 end
@@ -353,13 +379,13 @@ end
 local function remove_breakpoint(file, line)
   if file == '-' and lastfile then file = lastfile
   elseif file == '*' and line == 0 then breakpoints = {}
-  elseif iscasepreserving then file = string.lower(file) end
+  elseif iscasepreserving then file = string_lower(file) end
   if breakpoints[line] then breakpoints[line][file] = nil end
 end
 
 local function has_breakpoint(file, line)
   return breakpoints[line]
-     and breakpoints[line][iscasepreserving and string.lower(file) or file]
+     and breakpoints[line][iscasepreserving and string_lower(file) or file]
 end
 
 local function restore_vars(vars)
@@ -373,17 +399,17 @@ local function restore_vars(vars)
   -- the second loop processes them from i to 1
   local i = 1
   while true do
-    local name = debug.getlocal(3, i)
+    local name = debug_getlocal(3, i)
     if not name then break end
     i = i + 1
   end
   i = i - 1
   local written_vars = {}
   while i > 0 do
-    local name = debug.getlocal(3, i)
+    local name = debug_getlocal(3, i)
     if not written_vars[name] then
-      if string.sub(name, 1, 1) ~= '(' then
-        debug.setlocal(3, i, rawget(vars, name))
+      if string_sub(name, 1, 1) ~= '(' then
+        debug_setlocal(3, i, rawget(vars, name))
       end
       written_vars[name] = true
     end
@@ -391,13 +417,13 @@ local function restore_vars(vars)
   end
 
   i = 1
-  local func = debug.getinfo(3, "f").func
+  local func = debug_getinfo(3, "f").func
   while true do
-    local name = debug.getupvalue(func, i)
+    local name = debug_getupvalue(func, i)
     if not name then break end
     if not written_vars[name] then
-      if string.sub(name, 1, 1) ~= '(' then
-        debug.setupvalue(func, i, rawget(vars, name))
+      if string_sub(name, 1, 1) ~= '(' then
+        debug_setupvalue(func, i, rawget(vars, name))
       end
       written_vars[name] = true
     end
@@ -407,27 +433,27 @@ end
 
 local function capture_vars(level, thread)
   level = (level or 0)+2 -- add two levels for this and debug calls
-  local func = (thread and debug.getinfo(thread, level, "f") or debug.getinfo(level, "f") or {}).func
+  local func = (thread and debug_getinfo(thread, level, "f") or debug_getinfo(level, "f") or {}).func
   if not func then return {} end
 
   local vars = {['...'] = {}}
   local i = 1
   while true do
-    local name, value = debug.getupvalue(func, i)
+    local name, value = debug_getupvalue(func, i)
     if not name then break end
-    if string.sub(name, 1, 1) ~= '(' then vars[name] = value end
+    if string_sub(name, 1, 1) ~= '(' then vars[name] = value end
     i = i + 1
   end
   i = 1
   while true do
     local name, value
     if thread then
-      name, value = debug.getlocal(thread, level, i)
+      name, value = debug_getlocal(thread, level, i)
     else
-      name, value = debug.getlocal(level, i)
+      name, value = debug_getlocal(level, i)
     end
     if not name then break end
-    if string.sub(name, 1, 1) ~= '(' then vars[name] = value end
+    if string_sub(name, 1, 1) ~= '(' then vars[name] = value end
     i = i + 1
   end
   -- get varargs (these use negative indices)
@@ -435,9 +461,9 @@ local function capture_vars(level, thread)
   while true do
     local name, value
     if thread then
-      name, value = debug.getlocal(thread, level, -i)
+      name, value = debug_getlocal(thread, level, -i)
     else
-      name, value = debug.getlocal(level, -i)
+      name, value = debug_getlocal(level, -i)
     end
     -- `not name` should be enough, but LuaJIT 2.0.0 incorrectly reports `(*temporary)` names here
     if not name or name ~= "(*vararg)" then break end
@@ -457,7 +483,7 @@ end
 
 local function stack_depth(start_depth)
   for i = start_depth, 0, -1 do
-    if debug.getinfo(i, "l") then return i+1 end
+    if debug_getinfo(i, "l") then return i+1 end
   end
   return start_depth
 end
@@ -467,7 +493,7 @@ local function is_safe(stack_level)
   if stack_level == 3 then return true end
   for i = 3, stack_level do
     -- return if it is not safe to abort
-    local info = debug.getinfo(i, "S")
+    local info = debug_getinfo(i, "S")
     if not info then return true end
     if info.what == "C" then return false end
   end
@@ -475,10 +501,10 @@ local function is_safe(stack_level)
 end
 
 local function in_debugger()
-  local this = debug.getinfo(1, "S").source
+  local this = debug_getinfo(1, "S").source
   -- only need to check few frames as mobdebug frames should be close
   for i = 3, 7 do
-    local info = debug.getinfo(i, "S")
+    local info = debug_getinfo(i, "S")
     if not info then return false end
     if info.source == this then return true end
   end
@@ -588,7 +614,7 @@ local function debug_hook(event, line)
     stack_level = stack_level - 1
   elseif event == "line" then
     if mobdebug.linemap then
-      local ok, mappedline = pcall(mobdebug.linemap, line, debug.getinfo(2, "S").source)
+      local ok, mappedline = pcall(mobdebug.linemap, line, debug_getinfo(2, "S").source)
       if ok then line = mappedline end
       if not line then return end
     end
@@ -619,7 +645,7 @@ local function debug_hook(event, line)
     -- "return, tail return, return", which needs to be accounted for.
     stack_level = stack_depth(stack_level+1)
 
-    local caller = debug.getinfo(2, "S")
+    local caller = debug_getinfo(2, "S")
 
     -- grab the filename and fix it if needed
     local file = lastfile
@@ -630,23 +656,23 @@ local function debug_hook(event, line)
       -- Unfortunately, there is no reliable/quick way to figure out
       -- what is the filename and what is the source code.
       -- If the name doesn't start with `@`, assume it's a file name if it's all on one line.
-      if find(file, "^@") or not find(file, "[\r\n]") then
-        file = gsub(gsub(file, "^@", ""), "\\", "/")
+      if string_find(file, "^@") or not string_find(file, "[\r\n]") then
+        file = string_gsub(string_gsub(file, "^@", ""), "\\", "/")
         -- normalize paths that may include up-dir or same-dir references
         -- if the path starts from the up-dir or reference,
         -- prepend `basedir` to generate absolute path to keep breakpoints working.
         -- ignore qualified relative path (`D:../`) and UNC paths (`\\?\`)
-        if find(file, "^%.%./") then file = basedir..file end
-        if find(file, "/%.%.?/") then file = normalize_path(file) end
+        if string_find(file, "^%.%./") then file = basedir..file end
+        if string_find(file, "/%.%.?/") then file = normalize_path(file) end
         -- need this conversion to be applied to relative and absolute
         -- file names as you may write "require 'Foo'" to
         -- load "foo.lua" (on a case insensitive file system) and breakpoints
         -- set on foo.lua will not work if not converted to the same case.
-        if iscasepreserving then file = string.lower(file) end
-        if find(file, "^%./") then file = sub(file, 3)
-        else file = gsub(file, "^"..q(basedir), "") end
+        if iscasepreserving then file = string_lower(file) end
+        if string_find(file, "^%./") then file = string_sub(file, 3)
+        else file = string_gsub(file, "^"..q(basedir), "") end
         -- some file systems allow newlines in file names; remove these.
-        file = gsub(file, "\n", ' ')
+        file = string_gsub(file, "\n", ' ')
       else
         file = mobdebug.line(file)
       end
@@ -750,11 +776,11 @@ local function done()
 
   if not jit then
     for co, debugged in pairs(coroutines) do
-      if debugged then debug.sethook(co) end
+      if debugged then debug_sethook(co) end
     end
   end
 
-  debug.sethook()
+  debug_sethook()
   server:close()
 
   coro_debugger = nil -- to make sure isrunning() returns `false`
@@ -807,9 +833,9 @@ local function debugger_loop(sev, svars, sfile, sline)
       end
     end
     if server.settimeout then server:settimeout() end -- back to blocking
-    command = string.sub(line, string.find(line, "^[A-Z]+"))
+    command = string_sub(line, string_find(line, "^[A-Z]+"))
     if command == "SETB" then
-      local _, _, _, file, line = string.find(line, "^([A-Z]+)%s+(.-)%s+(%d+)%s*$")
+      local _, _, _, file, line = string_find(line, "^([A-Z]+)%s+(.-)%s+(%d+)%s*$")
       if file and line then
         set_breakpoint(file, tonumber(line))
         server:send("200 OK\n")
@@ -817,7 +843,7 @@ local function debugger_loop(sev, svars, sfile, sline)
         server:send("400 Bad Request\n")
       end
     elseif command == "DELB" then
-      local _, _, _, file, line = string.find(line, "^([A-Z]+)%s+(.-)%s+(%d+)%s*$")
+      local _, _, _, file, line = string_find(line, "^([A-Z]+)%s+(.-)%s+(%d+)%s*$")
       if file and line then
         remove_breakpoint(file, tonumber(line))
         server:send("200 OK\n")
@@ -826,8 +852,8 @@ local function debugger_loop(sev, svars, sfile, sline)
       end
     elseif command == "EXEC" then
       -- extract any optional parameters
-      local params = string.match(line, "--%s*(%b{})%s*$")
-      local _, _, chunk = string.find(line, "^[A-Z]+%s+(.+)$")
+      local params = string_match(line, "--%s*(%b{})%s*$")
+      local _, _, chunk = string_find(line, "^[A-Z]+%s+(.+)$")
       if chunk then
         local func, res = mobdebug.loadstring(chunk)
         local status
@@ -856,7 +882,7 @@ local function debugger_loop(sev, svars, sfile, sline)
         server:send("400 Bad Request\n")
       end
     elseif command == "LOAD" then
-      local _, _, size, name = string.find(line, "^[A-Z]+%s+(%d+)%s+(%S.-)%s*$")
+      local _, _, size, name = string_find(line, "^[A-Z]+%s+(%d+)%s+(%S.-)%s*$")
       size = tonumber(size)
 
       if abort == nil then -- no LOAD/RELOAD allowed inside start()
@@ -895,7 +921,7 @@ local function debugger_loop(sev, svars, sfile, sline)
         end
       end
     elseif command == "SETW" then
-      local _, _, exp = string.find(line, "^[A-Z]+%s+(.+)%s*$")
+      local _, _, exp = string_find(line, "^[A-Z]+%s+(.+)%s*$")
       if exp then
         local func, res = mobdebug.loadstring("return(" .. exp .. ")")
         if func then
@@ -911,7 +937,7 @@ local function debugger_loop(sev, svars, sfile, sline)
         server:send("400 Bad Request\n")
       end
     elseif command == "DELW" then
-      local _, _, index = string.find(line, "^[A-Z]+%s+(%d+)%s*$")
+      local _, _, index = string_find(line, "^[A-Z]+%s+(%d+)%s*$")
       index = tonumber(index)
       if index > 0 and index <= #watches then
         watchescnt = watchescnt - (watches[index] ~= emptyWatch and 1 or 0)
@@ -973,9 +999,9 @@ local function debugger_loop(sev, svars, sfile, sline)
         server:send(file)
       end
     elseif command == "BASEDIR" then
-      local _, _, dir = string.find(line, "^[A-Z]+%s+(.+)%s*$")
+      local _, _, dir = string_find(line, "^[A-Z]+%s+(.+)%s*$")
       if dir then
-        basedir = iscasepreserving and string.lower(dir) or dir
+        basedir = iscasepreserving and string_lower(dir) or dir
         -- reset cached source as it may change with basedir
         lastsource = nil
         server:send("200 OK\n")
@@ -1000,7 +1026,7 @@ local function debugger_loop(sev, svars, sfile, sline)
         server:send("401 Error in Execution " .. tostring(#vars) .. "\n")
         server:send(vars)
       else
-        local params = string.match(line, "--%s*(%b{})%s*$")
+        local params = string_match(line, "--%s*(%b{})%s*$")
         local pfunc = params and loadstring("return "..params) -- use internal function
         params = pfunc and pfunc()
         params = (type(params) == "table" and params or {})
@@ -1018,7 +1044,7 @@ local function debugger_loop(sev, svars, sfile, sline)
         end
       end
     elseif command == "OUTPUT" then
-      local _, _, stream, mode = string.find(line, "^[A-Z]+%s+(%w+)%s+([dcr])%s*$")
+      local _, _, stream, mode = string_find(line, "^[A-Z]+%s+(%w+)%s+([dcr])%s*$")
       if stream and mode and stream == "stdout" then
         -- assign "print" in the global environment
         local default = mode == 'd'
@@ -1032,7 +1058,7 @@ local function debugger_loop(sev, svars, sfile, sline)
             if mode == 'c' then iobase.print(unpack(tbl)) end
             for n = 1, #tbl do
               tbl[n] = select(2, pcall(mobdebug.line, tbl[n], {nocode = true, comment = false})) end
-            local file = table.concat(tbl, "\t").."\n"
+            local file = table_concat(tbl, "\t").."\n"
             server:send("204 Output " .. stream .. " " .. tostring(#file) .. "\n" .. file)
           end
         end)
@@ -1093,8 +1119,8 @@ local function start(controller_host, controller_port)
     -- (http://lua-users.org/lists/lua-l/2016-05/msg00297.html)
     local function f() return function()end end
     if f() ~= f() then -- Lua 5.1 or LuaJIT
-      local dtraceback = debug.traceback
-      debug.traceback = function (...)
+      local dtraceback = debug_traceback
+      debug_traceback = function (...)
         if select('#', ...) >= 1 then
           local thr, err, lvl = ...
           if type(thr) ~= 'thread' then err, lvl = thr, err end
@@ -1106,8 +1132,8 @@ local function start(controller_host, controller_port)
             return -- don't report locally to avoid double reporting
           end
         end
-        -- direct call to debug.traceback: return the original.
-        -- debug.traceback(nil, level) doesn't work in Lua 5.1
+        -- direct call to debug_traceback: return the original.
+        -- debug_traceback(nil, level) doesn't work in Lua 5.1
         -- (http://lua-users.org/lists/lua-l/2011-06/msg00574.html), so
         -- simply remove first frame from the stack trace
         local tb = dtraceback("", 2) -- skip debugger frames
@@ -1116,7 +1142,7 @@ local function start(controller_host, controller_port)
       end
     end
     coro_debugger = corocreate(debugger_loop)
-    debug.sethook(debug_hook, HOOKMASK)
+    debug_sethook(debug_hook, HOOKMASK)
     seen_hook = nil -- reset in case the last start() call was refused
     step_into = true -- start with step command
     return true
@@ -1156,7 +1182,7 @@ local function controller(controller_host, controller_port, scratchpad)
       if scratchpad then checkcount = mobdebug.checkcount end -- force suspend right away
 
       coro_debugee = corocreate(debugee)
-      debug.sethook(coro_debugee, debug_hook, HOOKMASK)
+      debug_sethook(coro_debugee, debug_hook, HOOKMASK)
       local status, err = cororesume(coro_debugee, unpack(arg or {}))
 
       -- was there an error or is the script done?
@@ -1166,10 +1192,10 @@ local function controller(controller_host, controller_port, scratchpad)
       else
         if status then -- normal execution is done
           break
-        elseif err and not string.find(tostring(err), deferror) then
+        elseif err and not string_find(tostring(err), deferror) then
           -- report the error back
           -- err is not necessarily a string, so convert to string to report
-          report(debug.traceback(coro_debugee), tostring(err))
+          report(debug_traceback(coro_debugee), tostring(err))
           if exitonerror then break end
           -- check if the debugging is done (coro_debugger is nil)
           if not coro_debugger then break end
@@ -1211,10 +1237,10 @@ local function on()
   if main then co = nil end
   if co then
     coroutines[co] = true
-    debug.sethook(co, debug_hook, HOOKMASK)
+    debug_sethook(co, debug_hook, HOOKMASK)
   else
     if jit then coroutines.main = true end
-    debug.sethook(debug_hook, HOOKMASK)
+    debug_sethook(debug_hook, HOOKMASK)
   end
 end
 
@@ -1229,10 +1255,10 @@ local function off()
   -- don't remove coroutine hook under LuaJIT as there is only one (global) hook
   if co then
     coroutines[co] = false
-    if not jit then debug.sethook(co) end
+    if not jit then debug_sethook(co) end
   else
     if jit then coroutines.main = false end
-    if not jit then debug.sethook() end
+    if not jit then debug_sethook() end
   end
 
   -- check if there is any thread that is still being debugged under LuaJIT;
@@ -1242,7 +1268,7 @@ local function off()
     for _, debugged in pairs(coroutines) do
       if debugged then remove = false; break end
     end
-    if remove then debug.sethook() end
+    if remove then debug_sethook() end
   end
 end
 
@@ -1253,10 +1279,10 @@ local function handle(params, client, options)
   local verbose = not options or options.verbose ~= nil and options.verbose
   local print = verbose and (type(verbose) == "function" and verbose or print) or function() end
   local file, line, watch_idx
-  local _, _, command = string.find(params, "^([a-z]+)")
+  local _, _, command = string_find(params, "^([a-z]+)")
   if command == "run" or command == "step" or command == "out"
   or command == "over" or command == "exit" then
-    client:send(string.upper(command) .. "\n")
+    client:send(string_upper(command) .. "\n")
     client:receive() -- this should consume the first '200 OK' response
     while true do
       local done = true
@@ -1265,21 +1291,21 @@ local function handle(params, client, options)
         print("Program finished")
         return nil, nil, false
       end
-      local _, _, status = string.find(breakpoint, "^(%d+)")
+      local _, _, status = string_find(breakpoint, "^(%d+)")
       if status == "200" then
         -- don't need to do anything
       elseif status == "202" then
-        _, _, file, line = string.find(breakpoint, "^202 Paused%s+(.-)%s+(%d+)%s*$")
+        _, _, file, line = string_find(breakpoint, "^202 Paused%s+(.-)%s+(%d+)%s*$")
         if file and line then
           print("Paused at file " .. file .. " line " .. line)
         end
       elseif status == "203" then
-        _, _, file, line, watch_idx = string.find(breakpoint, "^203 Paused%s+(.-)%s+(%d+)%s+(%d+)%s*$")
+        _, _, file, line, watch_idx = string_find(breakpoint, "^203 Paused%s+(.-)%s+(%d+)%s+(%d+)%s*$")
         if file and line and watch_idx then
           print("Paused at file " .. file .. " line " .. line .. " (watch expression " .. watch_idx .. ": [" .. watches[watch_idx] .. "])")
         end
       elseif status == "204" then
-        local _, _, stream, size = string.find(breakpoint, "^204 Output (%w+) (%d+)$")
+        local _, _, stream, size = string_find(breakpoint, "^204 Output (%w+) (%d+)$")
         if stream and size then
           local size = tonumber(size)
           local msg = size > 0 and client:receive(size) or ""
@@ -1289,7 +1315,7 @@ local function handle(params, client, options)
           done = false
         end
       elseif status == "401" then
-        local _, _, size = string.find(breakpoint, "^401 Error in Execution (%d+)$")
+        local _, _, size = string_find(breakpoint, "^401 Error in Execution (%d+)$")
         if size then
           local msg = client:receive(tonumber(size))
           print("Error in remote application: " .. msg)
@@ -1302,14 +1328,14 @@ local function handle(params, client, options)
       if done then break end
     end
   elseif command == "done" then
-    client:send(string.upper(command) .. "\n")
+    client:send(string_upper(command) .. "\n")
     -- no response is expected
   elseif command == "setb" or command == "asetb" then
-    _, _, _, file, line = string.find(params, "^([a-z]+)%s+(.-)%s+(%d+)%s*$")
+    _, _, _, file, line = string_find(params, "^([a-z]+)%s+(.-)%s+(%d+)%s*$")
     if file and line then
       -- if this is a file name, and not a file source
       if not file:find('^".*"$') then
-        file = string.gsub(file, "\\", "/") -- convert slash
+        file = string_gsub(file, "\\", "/") -- convert slash
         file = removebasedir(file, basedir)
       end
       client:send("SETB " .. file .. " " .. line .. "\n")
@@ -1322,16 +1348,16 @@ local function handle(params, client, options)
       print("Invalid command")
     end
   elseif command == "setw" then
-    local _, _, exp = string.find(params, "^[a-z]+%s+(.+)$")
+    local _, _, exp = string_find(params, "^[a-z]+%s+(.+)$")
     if exp then
       client:send("SETW " .. exp .. "\n")
       local answer = client:receive()
-      local _, _, watch_idx = string.find(answer, "^200 OK (%d+)%s*$")
+      local _, _, watch_idx = string_find(answer, "^200 OK (%d+)%s*$")
       if watch_idx then
         watches[watch_idx] = exp
         print("Inserted watch exp no. " .. watch_idx)
       else
-        local _, _, size = string.find(answer, "^401 Error in Expression (%d+)$")
+        local _, _, size = string_find(answer, "^401 Error in Expression (%d+)$")
         if size then
           local err = client:receive(tonumber(size)):gsub(".-:%d+:%s*","")
           print("Error: watch expression not set: " .. err)
@@ -1343,11 +1369,11 @@ local function handle(params, client, options)
       print("Invalid command")
     end
   elseif command == "delb" or command == "adelb" then
-    _, _, _, file, line = string.find(params, "^([a-z]+)%s+(.-)%s+(%d+)%s*$")
+    _, _, _, file, line = string_find(params, "^([a-z]+)%s+(.-)%s+(%d+)%s*$")
     if file and line then
       -- if this is a file name, and not a file source
       if not file:find('^".*"$') then
-        file = string.gsub(file, "\\", "/") -- convert slash
+        file = string_gsub(file, "\\", "/") -- convert slash
         file = removebasedir(file, basedir)
       end
       client:send("DELB " .. file .. " " .. line .. "\n")
@@ -1368,7 +1394,7 @@ local function handle(params, client, options)
       print("Error: all breakpoints not removed")
     end
   elseif command == "delw" then
-    local _, _, index = string.find(params, "^[a-z]+%s+(%d+)%s*$")
+    local _, _, index = string_find(params, "^[a-z]+%s+(%d+)%s*$")
     if index then
       client:send("DELW " .. index .. "\n")
       if client:receive() == "200 OK" then
@@ -1391,7 +1417,7 @@ local function handle(params, client, options)
   elseif command == "eval" or command == "exec"
       or command == "load" or command == "loadstring"
       or command == "reload" then
-    local _, _, exp = string.find(params, "^[a-z]+%s+(.+)$")
+    local _, _, exp = string_find(params, "^[a-z]+%s+(.+)$")
     if exp or (command == "reload") then
       if command == "eval" or command == "exec" then
         exp = (exp:gsub("%-%-%[(=*)%[.-%]%1%]", "") -- remove comments
@@ -1402,27 +1428,27 @@ local function handle(params, client, options)
       elseif command == "reload" then
         client:send("LOAD 0 -\n")
       elseif command == "loadstring" then
-        local _, _, _, file, lines = string.find(exp, "^([\"'])(.-)%1%s+(.+)")
+        local _, _, _, file, lines = string_find(exp, "^([\"'])(.-)%1%s+(.+)")
         if not file then
-           _, _, file, lines = string.find(exp, "^(%S+)%s+(.+)")
+           _, _, file, lines = string_find(exp, "^(%S+)%s+(.+)")
         end
         client:send("LOAD " .. tostring(#lines) .. " " .. file .. "\n")
         client:send(lines)
       else
-        local file = io.open(exp, "r")
+        local file = io_open(exp, "r")
         if not file and pcall(require, "winapi") then
           -- if file is not open and winapi is there, try with a short path;
           -- this may be needed for unicode paths on windows
           winapi.set_encoding(winapi.CP_UTF8)
           local shortp = winapi.short_path(exp)
-          file = shortp and io.open(shortp, "r")
+          file = shortp and io_open(shortp, "r")
         end
         if not file then return nil, nil, "Cannot open file " .. exp end
         -- read the file and remove the shebang line as it causes a compilation error
         local lines = file:read("*all"):gsub("^#!.-\n", "\n")
         file:close()
 
-        local file = string.gsub(exp, "\\", "/") -- convert slash
+        local file = string_gsub(exp, "\\", "/") -- convert slash
         file = removebasedir(file, basedir)
         client:send("LOAD " .. tostring(#lines) .. " " .. file .. "\n")
         if #lines > 0 then client:send(lines) end
@@ -1433,7 +1459,7 @@ local function handle(params, client, options)
           return nil, nil, "Debugger connection " .. (err or "error")
         end
         local done = true
-        local _, _, status, len = string.find(params, "^(%d+).-%s+(%d+)%s*$")
+        local _, _, status, len = string_find(params, "^(%d+).-%s+(%d+)%s*$")
         if status == "200" then
           len = tonumber(len)
           if len > 0 then
@@ -1456,12 +1482,12 @@ local function handle(params, client, options)
             return res[1], res
           end
         elseif status == "201" then
-          _, _, file, line = string.find(params, "^201 Started%s+(.-)%s+(%d+)%s*$")
+          _, _, file, line = string_find(params, "^201 Started%s+(.-)%s+(%d+)%s*$")
         elseif status == "202" or params == "200 OK" then
           -- do nothing; this only happens when RE/LOAD command gets the response
           -- that was for the original command that was aborted
         elseif status == "204" then
-          local _, _, stream, size = string.find(params, "^204 Output (%w+) (%d+)$")
+          local _, _, stream, size = string_find(params, "^204 Output (%w+) (%d+)$")
           if stream and size then
             local size = tonumber(size)
             local msg = size > 0 and client:receive(size) or ""
@@ -1497,10 +1523,10 @@ local function handle(params, client, options)
   elseif command == "suspend" then
     client:send("SUSPEND\n")
   elseif command == "stack" then
-    local opts = string.match(params, "^[a-z]+%s+(.+)$")
+    local opts = string_match(params, "^[a-z]+%s+(.+)$")
     client:send("STACK" .. (opts and " "..opts or "") .."\n")
     local resp = client:receive()
-    local _, _, status, res = string.find(resp, "^(%d+)%s+%w+%s+(.+)%s*$")
+    local _, _, status, res = string_find(resp, "^(%d+)%s+%w+%s+(.+)%s*$")
     if status == "200" then
       local func, err = loadstring(res)
       if func == nil then
@@ -1517,7 +1543,7 @@ local function handle(params, client, options)
       end
       return stack
     elseif status == "401" then
-      local _, _, len = string.find(resp, "%s+(%d+)%s*$")
+      local _, _, len = string_find(resp, "%s+(%d+)%s*$")
       len = tonumber(len)
       local res = len > 0 and client:receive(len) or "Invalid stack information."
       print("Error in expression: " .. res)
@@ -1527,7 +1553,7 @@ local function handle(params, client, options)
       return nil, nil, "Debugger error: unexpected response after STACK"
     end
   elseif command == "output" then
-    local _, _, stream, mode = string.find(params, "^[a-z]+%s+(%w+)%s+([dcr])%s*$")
+    local _, _, stream, mode = string_find(params, "^[a-z]+%s+(%w+)%s+([dcr])%s*$")
     if stream and mode then
       client:send("OUTPUT "..stream.." "..mode.."\n")
       local resp, err = client:receive()
@@ -1535,7 +1561,7 @@ local function handle(params, client, options)
         print("Unknown error: "..err)
         return nil, nil, "Debugger connection error: "..err
       end
-      local _, _, status = string.find(resp, "^(%d+)%s+%w+%s*$")
+      local _, _, status = string_find(resp, "^(%d+)%s+%w+%s*$")
       if status == "200" then
         print("Stream "..stream.." redirected")
         outputs[stream] = type(options) == 'table' and options.handler or nil
@@ -1550,10 +1576,10 @@ local function handle(params, client, options)
       print("Invalid command")
     end
   elseif command == "basedir" then
-    local _, _, dir = string.find(params, "^[a-z]+%s+(.+)$")
+    local _, _, dir = string_find(params, "^[a-z]+%s+(.+)$")
     if dir then
-      dir = string.gsub(dir, "\\", "/") -- convert slash
-      if not string.find(dir, "/$") then dir = dir .. "/" end
+      dir = string_gsub(dir, "\\", "/") -- convert slash
+      if not string_find(dir, "/$") then dir = dir .. "/" end
 
       local remdir = dir:match("\t(.+)")
       if remdir then dir = dir:gsub("/?\t.+", "/") end
@@ -1565,7 +1591,7 @@ local function handle(params, client, options)
         print("Unknown error: "..err)
         return nil, nil, "Debugger connection error: "..err
       end
-      local _, _, status = string.find(resp, "^(%d+)%s+%w+%s*$")
+      local _, _, status = string_find(resp, "^(%d+)%s+%w+%s*$")
       if status == "200" then
         print("New base directory is " .. basedir)
       else
@@ -1598,7 +1624,7 @@ local function handle(params, client, options)
     print("done                  -- stops the debugger and continues application execution")
     print("exit                  -- exits debugger and the application")
   else
-    local _, _, spaces = string.find(params, "^(%s*)$")
+    local _, _, spaces = string_find(params, "^(%s*)$")
     if spaces then
       return nil, nil, "Empty command"
     else
@@ -1626,12 +1652,12 @@ local function listen(host, port)
   client:receive()
 
   local breakpoint = client:receive()
-  local _, _, file, line = string.find(breakpoint, "^202 Paused%s+(.-)%s+(%d+)%s*$")
+  local _, _, file, line = string_find(breakpoint, "^202 Paused%s+(.-)%s+(%d+)%s*$")
   if file and line then
     print("Paused at file " .. file )
     print("Type 'help' for commands")
   else
-    local _, _, size = string.find(breakpoint, "^401 Error in Execution (%d+)%s*$")
+    local _, _, size = string_find(breakpoint, "^401 Error in Execution (%d+)%s*$")
     if size then
       print("Error in remote application: ")
       print(client:receive(size))
@@ -1639,8 +1665,8 @@ local function listen(host, port)
   end
 
   while true do
-    io.write("> ")
-    local file, line, err = handle(io.read("*line"), client)
+    io_write("> ")
+    local file, line, err = handle(io_read("*line"), client)
     if not file and err == false then break end -- completed debugging
   end
 
