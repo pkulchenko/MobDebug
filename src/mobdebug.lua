@@ -19,7 +19,7 @@ end)("os")
 
 local mobdebug = {
   _NAME = "mobdebug",
-  _VERSION = "0.648",
+  _VERSION = "0.649",
   _COPYRIGHT = "Paul Kulchenko",
   _DESCRIPTION = "Mobile Remote Debugger for the Lua programming language",
   port = os and os.getenv and tonumber((os.getenv("MOBDEBUG_PORT"))) or 8172,
@@ -296,7 +296,9 @@ local function stack(start)
     while true do
       local name, value = debug.getlocal(f, i)
       if not name then break end
-      if string.sub(name, 1, 1) ~= '(' then locals[name] = {value, tostring(value)} end
+      if string.sub(name, 1, 1) ~= '(' then
+        locals[name] = {value, select(2,pcall(tostring,value))}
+      end
       i = i + 1
     end
     -- get varargs (these use negative indices)
@@ -305,7 +307,7 @@ local function stack(start)
       local name, value = debug.getlocal(f, -i)
       -- `not name` should be enough, but LuaJIT 2.0.0 incorrectly reports `(*temporary)` names here
       if not name or name ~= "(*vararg)" then break end
-      locals[name:gsub("%)$"," "..i..")")] = {value, tostring(value)}
+      locals[name:gsub("%)$"," "..i..")")] = {value, select(2,pcall(tostring,value))}
       i = i + 1
     end
     -- get upvalues
@@ -314,7 +316,7 @@ local function stack(start)
     while func do -- check for func as it may be nil for tail calls
       local name, value = debug.getupvalue(func, i)
       if not name then break end
-      ups[name] = {value, tostring(value)}
+      ups[name] = {value, select(2,pcall(tostring,value))}
       i = i + 1
     end
     return locals, ups
@@ -690,14 +692,10 @@ local function debug_hook(event, line)
     end
 
     -- handle 'stack' command that provides stack() information to the debugger
-    if status and res == 'stack' then
-      while status and res == 'stack' do
-        -- resume with the stack trace and variables
-        if vars then restore_vars(vars) end -- restore vars so they are reflected in stack values
-        -- this may fail if __tostring method fails at run-time
-        local ok, snapshot = pcall(stack, 4)
-        status, res = cororesume(coro_debugger, ok and events.STACK or events.BREAK, snapshot, file, line)
-      end
+    while status and res == 'stack' do
+      -- resume with the stack trace and variables
+      if vars then restore_vars(vars) end -- restore vars so they are reflected in stack values
+      status, res = cororesume(coro_debugger, events.STACK, stack(3), file, line)
     end
 
     -- need to recheck once more as resume after 'stack' command may
