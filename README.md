@@ -20,6 +20,7 @@ extends it in several ways:
 * added support for [Moai](http://getmoai.com/) debugging;
 * added support for Lua 5.2 and Lua 5.3;
 * added support for varargs in stack trace;
+* added support for vararg expressions in EXEC;
 * added support for LuaJIT debugging (see note in Dependencies);
 * added support for nginx/OpenResty and Lapis debugging;
 * added support for cross-platform debugging (with client and server running on different platforms/filesystems);

@@ -1,5 +1,18 @@
 # MobDebug Changelog
 
+## v0.70 (Sep 02 2017)
+  - Upgraded Serpent (0.30) to allow skipping `__tostring` (closes #27, closes #29).
+  - Improved handling of `__tostring` failures in stack processing (#27, #29).
+  - Fixed returning intercepted traceback if the value is not a string (fixes #33).
+  - Updated traceback reported from `debug.traceback` to avoid skipping one frame (#31).
+  - Limited setting `debug.traceback` to Lua5.1/LuaJIT (closes #31).
+  - Upgraded Serpent (0.288) to add `maxlength` and other improvements.
+  - Updated debugger to extend STACK command with additional options.
+  - Updated debugger to add support for vararg expressions in EXEC command.
+  - Updated debugger to extend EXEC command with additional options.
+  - Fixed updir removal in normalization to only happen at the beginning of the line.
+  - Updated stack generation for nginx/openresty as it no longer generates additional stack frame.
+
 ## v0.64 (Aug 06 2016)
   - Add callback mobdebug.onscratch (thanks to @dodo).
   - Added path normalization to file names that don't start with `@`.
