@@ -19,7 +19,7 @@ end)("os")
 
 local mobdebug = {
   _NAME = "mobdebug",
-  _VERSION = "0.701",
+  _VERSION = "0.702",
   _COPYRIGHT = "Paul Kulchenko",
   _DESCRIPTION = "Mobile Remote Debugger for the Lua programming language",
   port = os and os.getenv and tonumber((os.getenv("MOBDEBUG_PORT"))) or 8172,
@@ -1163,8 +1163,12 @@ local function controller(controller_host, controller_port, scratchpad)
       if abort then
         if tostring(abort) == 'exit' then break end
       else
-        if status then -- normal execution is done
-          break
+        if status then -- no errors
+          if corostatus(coro_debugee) == "suspended" then
+            -- the script called `coroutine.yield` in the "main" thread
+            error("attempt to yield from the main thread", 3)
+          end
+          break -- normal execution is done
         elseif err and not string.find(tostring(err), deferror) then
           -- report the error back
           -- err is not necessarily a string, so convert to string to report
