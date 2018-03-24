@@ -1,6 +1,6 @@
 # Project Description
 
-MobDebug is a remote debugger for Lua (including Lua 5.1, Lua 5.2, Lua 5.3, and LuaJIT 2.x).
+MobDebug is a remote debugger for Lua (including Lua 5.1, Lua 5.2, Lua 5.3, Lua 5.4, and LuaJIT 2.x).
 
 ## Features
 
@@ -18,7 +18,7 @@ extends it in several ways:
 * added on/off commands to turn debugging on and off (to improve performance);
 * added support for coroutine debugging (see examples/README for details);
 * added support for [Moai](http://getmoai.com/) debugging;
-* added support for Lua 5.2 and Lua 5.3;
+* added support for Lua 5.2, Lua 5.3, and Lua 5.4;
 * added support for varargs in stack trace;
 * added support for vararg expressions in EXEC;
 * added support for LuaJIT debugging (see note in Dependencies);
@@ -44,8 +44,8 @@ See `examples/README` and `examples/*.lua` for examples of how to use the module
 
 ## Dependencies
 
-MobDebug depends on LuaSocket 2.0+ and has been tested with Lua 5.1, Lua 5.2, and Lua 5.3.
-MobDebug also works with LuaJIT v2.0; using `loop` and `scratchpad` methods requires v2.0.1.
+MobDebug depends on LuaSocket 2.0+ and has been tested with Lua 5.1, Lua 5.2, Lua 5.3, and Lua 5.4.
+MobDebug also works with LuaJIT v2.0+; using `loop` and `scratchpad` methods requires v2.0.1.
 
 ## Author
 
