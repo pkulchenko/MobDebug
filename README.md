@@ -7,6 +7,13 @@ MobDebug is a remote debugger for Lua (including Lua 5.1, Lua 5.2, Lua 5.3, Lua 
 MobDebug allows to control the execution of another Lua program remotely,
 set breakpoints, and inspect the current state of the program.
 
+Mobdebug is a cross-platform debugger, which not only works on Windows, macOS, and Linux, but
+also supports debugging with the application and debugger running on different platforms.
+
+It also supports source maps, which allows debugging of Lua-based languages,
+like [Moonscript](http://notebook.kulchenko.com/zerobrane/moonscript-debugging-with-zerobrane-studio)
+and [GSL-shell](http://notebook.kulchenko.com/zerobrane/gsl-shell-debugging-with-zerobrane-studio).
+
 MobDebug is based on [RemDebug](http://www.keplerproject.org/remdebug/) and
 extends it in several ways:
 
