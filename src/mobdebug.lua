@@ -535,7 +535,7 @@ local function handle_breakpoint(peer)
     -- although this is likely to not go well.
     return
   end
-
+  peer:send("200 OK\n")--notify server that the breakpoint set has finished
   buf = nil
 end
 
