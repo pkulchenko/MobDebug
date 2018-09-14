@@ -238,7 +238,11 @@ local function s(t, opts)
       return tag..globerr(t, level)
     elseif ttype == 'function' then
       seen[t] = insref or spath
-      if opts.nocode then return tag.."function() --[[..skipped..]] end"..comment(t, level) end
+      -- if opts.nocode then return tag.."function() --[[..skipped..]] end"..comment(t, level) end
+      if opts.nocode then --songtm:the debugger can get the function's source pos(so can jump to definition)
+        local source = debug.getinfo(t, "Snl")
+        return tag .. "function() return \""..source.short_src..":"..source.linedefined.."\" end" .. comment(t, level)
+      end
       local ok, res = pcall(string.dump, t)
       local func = ok and "((loadstring or load)("..safestr(res)..",'@serialized'))"..comment(t, level)
       return tag..(func or globerr(t, level))
@@ -535,7 +539,7 @@ local function handle_breakpoint(peer)
     -- although this is likely to not go well.
     return
   end
-
+  peer:send("200 OK\n")--notify server that the breakpoint set has finished
   buf = nil
 end
 
@@ -662,14 +666,14 @@ local function debug_hook(event, line)
 
     if is_pending(server) then handle_breakpoint(server) end
 
-    local vars, status, res
+    local vars, status, res, optlv
     if (watchescnt > 0) then
       vars = capture_vars(1)
       for index, value in pairs(watches) do
         setfenv(value, vars)
         local ok, fired = pcall(value)
         if ok and fired then
-          status, res = cororesume(coro_debugger, events.WATCH, vars, file, line, index)
+          status, res, optlv = cororesume(coro_debugger, events.WATCH, vars, file, line, index)
           break -- any one watch is enough; don't check multiple times
         end
       end
@@ -689,14 +693,14 @@ local function debug_hook(event, line)
       vars = vars or capture_vars(1)
       step_into = false
       step_over = false
-      status, res = cororesume(coro_debugger, events.BREAK, vars, file, line)
+      status, res, optlv = cororesume(coro_debugger, events.BREAK, vars, file, line)
     end
 
     -- handle 'stack' command that provides stack() information to the debugger
     while status and res == 'stack' do
       -- resume with the stack trace and variables
       if vars then restore_vars(vars) end -- restore vars so they are reflected in stack values
-      status, res = cororesume(coro_debugger, events.STACK, stack(3), file, line)
+      status, res, optlv = cororesume(coro_debugger, events.STACK, optlv and capture_vars(optlv) or stack(3) , file, line)
     end
 
     -- need to recheck once more as resume after 'stack' command may
@@ -838,6 +842,11 @@ local function debugger_loop(sev, svars, sfile, sline)
           -- if the requested stack frame is not the current one, then use a new capture
           -- with a specific stack frame: `capture_vars(0, coro_debugee)`
           local env = stack and coro_debugee and capture_vars(stack-1, coro_debugee) or eval_env
+          -- main thread capture vars
+          if stack and not coro_debugee then
+            local ev, vars = coroyield("stack", stack)
+            if ev and ev == events.STACK then env = vars end
+          end
           setfenv(func, env)
           status, res = stringify_results(params, pcall(func, unpack(env['...'] or {})))
         end
