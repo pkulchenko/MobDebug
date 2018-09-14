@@ -238,7 +238,11 @@ local function s(t, opts)
       return tag..globerr(t, level)
     elseif ttype == 'function' then
       seen[t] = insref or spath
-      if opts.nocode then return tag.."function() --[[..skipped..]] end"..comment(t, level) end
+      -- if opts.nocode then return tag.."function() --[[..skipped..]] end"..comment(t, level) end
+      if opts.nocode then --songtm:the debugger can get the function's source pos(so can jump to definition)
+        local source = debug.getinfo(t, "Snl")
+        return tag .. "function() return \""..source.short_src..":"..source.linedefined.."\" end" .. comment(t, level)
+      end
       local ok, res = pcall(string.dump, t)
       local func = ok and "((loadstring or load)("..safestr(res)..",'@serialized'))"..comment(t, level)
       return tag..(func or globerr(t, level))
