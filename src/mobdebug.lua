@@ -1289,11 +1289,13 @@ local function handle(params, client, options)
       elseif status == "202" then
         _, _, file, line = string.find(breakpoint, "^202 Paused%s+(.-)%s+(%d+)%s*$")
         if file and line then
+          if basedir then file = basedir..file end
           print("Paused at file " .. file .. " line " .. line)
         end
       elseif status == "203" then
         _, _, file, line, watch_idx = string.find(breakpoint, "^203 Paused%s+(.-)%s+(%d+)%s+(%d+)%s*$")
         if file and line and watch_idx then
+          if basedir then file = basedir..file end
           print("Paused at file " .. file .. " line " .. line .. " (watch expression " .. watch_idx .. ": [" .. watches[watch_idx] .. "])")
         end
       elseif status == "204" then
@@ -1333,7 +1335,9 @@ local function handle(params, client, options)
       client:send("SETB " .. file .. " " .. line .. "\n")
       if command == "asetb" or client:receive() == "200 OK" then
         set_breakpoint(file, line)
-        print("Breakpoint " .. tostring(breakpoint_nums[line][file]) .. " at file " .. file .. " line " .. tostring(line))
+        local num = breakpoint_nums[line][file]
+        if basedir then file = basedir..file end
+        print("Breakpoint " .. tostring(num) .. " at file " .. file .. " line " .. tostring(line))
       else
         print("Error: breakpoint not inserted")
       end
