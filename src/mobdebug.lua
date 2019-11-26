@@ -1425,9 +1425,9 @@ local function handle(params, client, options)
         local lines = file:read("*all"):gsub("^#!.-\n", "\n")
         file:close()
 
-        local file = string.gsub(exp, "\\", "/") -- convert slash
-        file = removebasedir(file, basedir)
-        client:send("LOAD " .. tostring(#lines) .. " " .. file .. "\n")
+        local fname = string.gsub(exp, "\\", "/") -- convert slash
+        fname = removebasedir(fname, basedir)
+        client:send("LOAD " .. tostring(#lines) .. " " .. fname .. "\n")
         if #lines > 0 then client:send(lines) end
       end
       while true do
@@ -1643,7 +1643,7 @@ local function listen(host, port)
 
   while true do
     io.write("> ")
-    local file, line, err = handle(io.read("*line"), client)
+    local file, _, err = handle(io.read("*line"), client)
     if not file and err == false then break end -- completed debugging
   end
 
