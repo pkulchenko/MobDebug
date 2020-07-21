@@ -19,7 +19,7 @@ end)("os")
 
 local mobdebug = {
   _NAME = "mobdebug",
-  _VERSION = "0.707",
+  _VERSION = "0.708",
   _COPYRIGHT = "Paul Kulchenko",
   _DESCRIPTION = "Mobile Remote Debugger for the Lua programming language",
   port = os and os.getenv and tonumber((os.getenv("MOBDEBUG_PORT"))) or 8172,
@@ -646,8 +646,9 @@ local function debug_hook(event, line)
         -- load "foo.lua" (on a case insensitive file system) and breakpoints
         -- set on foo.lua will not work if not converted to the same case.
         if iscasepreserving then file = string.lower(file) end
-        if find(file, "^%./") then file = sub(file, 3)
-        else file = gsub(file, "^"..q(basedir), "") end
+        if find(file, "^%./") then file = sub(file, 3) end
+        -- remove basedir, so that breakpoints are checked properly
+        file = gsub(file, "^"..q(basedir), "")
         -- some file systems allow newlines in file names; remove these.
         file = gsub(file, "\n", ' ')
       else
