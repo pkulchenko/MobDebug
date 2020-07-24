@@ -19,7 +19,7 @@ end)("os")
 
 local mobdebug = {
   _NAME = "mobdebug",
-  _VERSION = "0.708",
+  _VERSION = "0.709",
   _COPYRIGHT = "Paul Kulchenko",
   _DESCRIPTION = "Mobile Remote Debugger for the Lua programming language",
   port = os and os.getenv and tonumber((os.getenv("MOBDEBUG_PORT"))) or 8172,
@@ -760,6 +760,7 @@ local function done()
   coro_debugger = nil -- to make sure isrunning() returns `false`
   seen_hook = nil -- to make sure that the next start() call works
   abort = nil -- to make sure that callback calls use proper "abort" value
+  basedir = "" -- to reset basedir in case the same module/state is reused
 end
 
 local function debugger_loop(sev, svars, sfile, sline)
