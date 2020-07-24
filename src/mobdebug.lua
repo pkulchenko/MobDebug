@@ -102,6 +102,9 @@ local coro_debugee
 local coroutines = {}; setmetatable(coroutines, {__mode = "k"}) -- "weak" keys
 local events = { BREAK = 1, WATCH = 2, RESTART = 3, STACK = 4 }
 local breakpoints = {}
+local breakpoint_nums = {}
+local breakpoint_nums_to_locs = {}
+local breakpoint_cur_num = 1
 local watches = {}
 local lastsource
 local lastfile
@@ -348,13 +351,25 @@ local function set_breakpoint(file, line)
   elseif iscasepreserving then file = string.lower(file) end
   if not breakpoints[line] then breakpoints[line] = {} end
   breakpoints[line][file] = true
+  if not breakpoint_nums[line] then breakpoint_nums[line] = {} end
+  if not breakpoint_nums[line][file] then
+    breakpoint_nums[line][file] = breakpoint_cur_num
+    breakpoint_nums_to_locs[breakpoint_cur_num] = { line, file }
+    breakpoint_cur_num = breakpoint_cur_num + 1
+  end
 end
 
 local function remove_breakpoint(file, line)
   if file == '-' and lastfile then file = lastfile
-  elseif file == '*' and line == 0 then breakpoints = {}
+  elseif file == '*' and line == 0 then
+    breakpoints = {}
+    breakpoint_nums = {}
   elseif iscasepreserving then file = string.lower(file) end
   if breakpoints[line] then breakpoints[line][file] = nil end
+  if breakpoint_nums[line] then
+    breakpoint_nums_to_locs[breakpoint_nums[line][file]] = nil
+    breakpoint_nums[line][file] = nil
+  end
 end
 
 local function has_breakpoint(file, line)
@@ -1258,11 +1273,13 @@ local function handle(params, client, options)
       elseif status == "202" then
         _, _, file, line = string.find(breakpoint, "^202 Paused%s+(.-)%s+(%d+)%s*$")
         if file and line then
+          if basedir then file = basedir..file end
           print("Paused at file " .. file .. " line " .. line)
         end
       elseif status == "203" then
         _, _, file, line, watch_idx = string.find(breakpoint, "^203 Paused%s+(.-)%s+(%d+)%s+(%d+)%s*$")
         if file and line and watch_idx then
+          if basedir then file = basedir..file end
           print("Paused at file " .. file .. " line " .. line .. " (watch expression " .. watch_idx .. ": [" .. watches[watch_idx] .. "])")
         end
       elseif status == "204" then
@@ -1302,6 +1319,9 @@ local function handle(params, client, options)
       client:send("SETB " .. file .. " " .. line .. "\n")
       if command == "asetb" or client:receive() == "200 OK" then
         set_breakpoint(file, line)
+        local num = breakpoint_nums[line][file]
+        if basedir then file = basedir..file end
+        print("Breakpoint " .. tostring(num) .. " at file " .. file .. " line " .. tostring(line))
       else
         print("Error: breakpoint not inserted")
       end
@@ -1331,6 +1351,17 @@ local function handle(params, client, options)
     end
   elseif command == "delb" or command == "adelb" then
     _, _, _, file, line = string.find(params, "^([a-z]+)%s+(.-)%s+(%d+)%s*$")
+    if not (file and line) then
+      local num
+      _, _, _, num = string.find(params, "^([a-z]+)%s+(%d+)%s*$")
+      if num then
+        num = tonumber(num)
+        if breakpoint_nums_to_locs[num] then
+          line = breakpoint_nums_to_locs[num][1]
+          file = breakpoint_nums_to_locs[num][2]
+        end
+      end
+    end
     if file and line then
       -- if this is a file name, and not a file source
       if not file:find('^".*"$') then
@@ -1339,6 +1370,9 @@ local function handle(params, client, options)
       end
       client:send("DELB " .. file .. " " .. line .. "\n")
       if command == "adelb" or client:receive() == "200 OK" then
+        if breakpoint_nums[line] and breakpoint_nums[line][file] then
+          print("Removed breakpoint " .. tostring(breakpoint_nums[line][file]))
+        end
         remove_breakpoint(file, line)
       else
         print("Error: breakpoint not removed")
@@ -1350,6 +1384,13 @@ local function handle(params, client, options)
     local file, line = "*", 0
     client:send("DELB " .. file .. " " .. tostring(line) .. "\n")
     if client:receive() == "200 OK" then
+      local nums = ""
+      for _, l in pairs(breakpoint_nums) do
+        for _, f in pairs(l) do
+          nums = nums .. " " .. tostring(f)
+        end
+      end
+      print("Removed breakpoints ".. nums)
       remove_breakpoint(file, line)
     else
       print("Error: all breakpoints not removed")
