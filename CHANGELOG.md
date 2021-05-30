@@ -1,5 +1,7 @@
 # MobDebug Changelog
 
+## v0.71 (May 30 2021)
+  - Updated the usages of receive to be compatible with luasocket version 3
 ## v0.70 (Sep 02 2017)
   - Upgraded Serpent (0.30) to allow skipping `__tostring` (closes #27, closes #29).
   - Improved handling of `__tostring` failures in stack processing (#27, #29).

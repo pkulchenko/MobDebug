@@ -517,7 +517,7 @@ local function handle_breakpoint(peer)
   buf = buf .. readnext(peer, 5-#buf)
   if buf ~= 'SETB ' and buf ~= 'DELB ' then return end
 
-  local res, _, partial = peer:receive() -- get the rest of the line; blocking
+  local res, _, partial = peer:receive('*l') -- get the rest of the line; blocking
   if not res then
     if partial then buf = buf .. partial end
     return
@@ -774,7 +774,7 @@ local function debugger_loop(sev, svars, sfile, sline)
     local line, err
     if mobdebug.yield and server.settimeout then server:settimeout(mobdebug.yieldtimeout) end
     while true do
-      line, err = server:receive()
+      line, err = server:receive('*l')
       if not line then
         if err == "timeout" then
           if mobdebug.yield then mobdebug.yield() end
@@ -1244,10 +1244,10 @@ local function handle(params, client, options)
   if command == "run" or command == "step" or command == "out"
   or command == "over" or command == "exit" then
     client:send(string.upper(command) .. "\n")
-    client:receive() -- this should consume the first '200 OK' response
+    client:receive('*l') -- this should consume the first '200 OK' response
     while true do
       local done = true
-      local breakpoint = client:receive()
+      local breakpoint = client:receive('*l')
       if not breakpoint then
         print("Program finished")
         return nil, nil, false
@@ -1300,7 +1300,7 @@ local function handle(params, client, options)
         file = removebasedir(file, basedir)
       end
       client:send("SETB " .. file .. " " .. line .. "\n")
-      if command == "asetb" or client:receive() == "200 OK" then
+      if command == "asetb" or client:receive('*l') == "200 OK" then
         set_breakpoint(file, line)
       else
         print("Error: breakpoint not inserted")
@@ -1312,7 +1312,7 @@ local function handle(params, client, options)
     local _, _, exp = string.find(params, "^[a-z]+%s+(.+)$")
     if exp then
       client:send("SETW " .. exp .. "\n")
-      local answer = client:receive()
+      local answer = client:receive('*l')
       local _, _, watch_idx = string.find(answer, "^200 OK (%d+)%s*$")
       if watch_idx then
         watches[watch_idx] = exp
@@ -1338,7 +1338,7 @@ local function handle(params, client, options)
         file = removebasedir(file, basedir)
       end
       client:send("DELB " .. file .. " " .. line .. "\n")
-      if command == "adelb" or client:receive() == "200 OK" then
+      if command == "adelb" or client:receive('*l') == "200 OK" then
         remove_breakpoint(file, line)
       else
         print("Error: breakpoint not removed")
@@ -1349,7 +1349,7 @@ local function handle(params, client, options)
   elseif command == "delallb" then
     local file, line = "*", 0
     client:send("DELB " .. file .. " " .. tostring(line) .. "\n")
-    if client:receive() == "200 OK" then
+    if client:receive('*l') == "200 OK" then
       remove_breakpoint(file, line)
     else
       print("Error: all breakpoints not removed")
@@ -1358,7 +1358,7 @@ local function handle(params, client, options)
     local _, _, index = string.find(params, "^[a-z]+%s+(%d+)%s*$")
     if index then
       client:send("DELW " .. index .. "\n")
-      if client:receive() == "200 OK" then
+      if client:receive('*l') == "200 OK" then
         watches[index] = nil
       else
         print("Error: watch expression not removed")
@@ -1369,7 +1369,7 @@ local function handle(params, client, options)
   elseif command == "delallw" then
     for index, exp in pairs(watches) do
       client:send("DELW " .. index .. "\n")
-      if client:receive() == "200 OK" then
+      if client:receive('*l') == "200 OK" then
         watches[index] = nil
       else
         print("Error: watch expression at index " .. index .. " [" .. exp .. "] not removed")
@@ -1415,7 +1415,7 @@ local function handle(params, client, options)
         if #lines > 0 then client:send(lines) end
       end
       while true do
-        local params, err = client:receive()
+        local params, err = client:receive('*l')
         if not params then
           return nil, nil, "Debugger connection " .. (err or "error")
         end
@@ -1486,7 +1486,7 @@ local function handle(params, client, options)
   elseif command == "stack" then
     local opts = string.match(params, "^[a-z]+%s+(.+)$")
     client:send("STACK" .. (opts and " "..opts or "") .."\n")
-    local resp = client:receive()
+    local resp = client:receive('*l')
     local _, _, status, res = string.find(resp, "^(%d+)%s+%w+%s+(.+)%s*$")
     if status == "200" then
       local func, err = loadstring(res)
@@ -1517,7 +1517,7 @@ local function handle(params, client, options)
     local _, _, stream, mode = string.find(params, "^[a-z]+%s+(%w+)%s+([dcr])%s*$")
     if stream and mode then
       client:send("OUTPUT "..stream.." "..mode.."\n")
-      local resp, err = client:receive()
+      local resp, err = client:receive('*l')
       if not resp then
         print("Unknown error: "..err)
         return nil, nil, "Debugger connection error: "..err
@@ -1547,7 +1547,7 @@ local function handle(params, client, options)
       basedir = dir
 
       client:send("BASEDIR "..(remdir or dir).."\n")
-      local resp, err = client:receive()
+      local resp, err = client:receive('*l')
       if not resp then
         print("Unknown error: "..err)
         return nil, nil, "Debugger connection error: "..err
@@ -1610,9 +1610,9 @@ local function listen(host, port)
   local client = server:accept()
 
   client:send("STEP\n")
-  client:receive()
+  client:receive('*l')
 
-  local breakpoint = client:receive()
+  local breakpoint = client:receive('*l')
   local _, _, file, line = string.find(breakpoint, "^202 Paused%s+(.-)%s+(%d+)%s*$")
   if file and line then
     print("Paused at file " .. file )
