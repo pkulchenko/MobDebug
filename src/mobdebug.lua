@@ -19,7 +19,7 @@ end)("os")
 
 local mobdebug = {
   _NAME = "mobdebug",
-  _VERSION = "0.7091",
+  _VERSION = "0.7092",
   _COPYRIGHT = "Paul Kulchenko",
   _DESCRIPTION = "Mobile Remote Debugger for the Lua programming language",
   port = os and os.getenv and tonumber((os.getenv("MOBDEBUG_PORT"))) or 8172,
@@ -337,7 +337,6 @@ local function stack(start)
        linemap and linemap(source.currentline, source.source) or source.currentline,
        source.what, source.namewhat, source.short_src},
       vars(i+1)})
-    if source.what == 'main' then break end
   end
   return stack
 end
