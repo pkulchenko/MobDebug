@@ -1,5 +1,24 @@
 # MobDebug Changelog
 
+## v0.80 (Jun 16 2021)
+  - Added workaround for luasocket 3.0-rc1 incompatibility with Lua 5.4.3 (closes #60, closes #61).
+    Thanks to [Catalin Marincia](https://github.com/cata0309) for the patch.
+  - Removed comment removal logic from remote commands to limit code modifications (#53).
+  - Removed check that prevented full stack to be returned by STACK command (closes #55).
+  - Updated *vararg check to make it work with Lua 5.4 (closes #59).
+  - Added resetting basedir value when DONE/done() command is executed (#51).
+  - Improved handling of breakpoints in remapped cases (#51).
+  - Improve debugging of openresty/lua_nginx scripts (closes #51).
+  - Removed wxlua-specific logic to improve debugging wxlua apps with `strict` module.
+  - Updated to improve based on static analyzer report.
+  - Fixed garbage collection of 'captured' values (pkulchenko/ZeroBraneStudio#919).
+  - Updated README to add cross-platform debugging and source map support.
+  - Upgraded Serpent (0.302) to fix serialization issue (pkulchenko/ZeroBraneStudio#900).
+  - Updated README to add Lua 5.4 support.
+  - Upgraded Serpent (0.301) to avoid metafield processing when `metatostring` is disabled.
+  - Added better report when trying to yield into debugging (pkulchenko/ZeroBraneStudio#801).
+  - Fixed `loadstring` command for content that starts with an empty string.
+
 ## v0.70 (Sep 02 2017)
   - Upgraded Serpent (0.30) to allow skipping `__tostring` (closes #27, closes #29).
   - Improved handling of `__tostring` failures in stack processing (#27, #29).
