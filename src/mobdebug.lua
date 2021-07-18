@@ -26,6 +26,8 @@ local mobdebug = {
   checkcount = 200,
   yieldtimeout = 0.02, -- yield timeout (s)
   connecttimeout = 2, -- connect timeout (s)
+  remote_root_dir = nil,
+  local_root_dir = nil,
 }
 
 local HOOKMASK = "lcr"
@@ -338,8 +340,16 @@ local function stack(start)
       if src:find("%./") == 1 then src = src:sub(3) end
     end
 
+    if
+      mobdebug.remote_root_dir
+      and src:find(mobdebug.remote_root_dir, 1, true) == 1
+    then
+      src = (mobdebug.local_root_dir or "")
+        .. src:sub(#mobdebug.remote_root_dir + 1)
+    end
+
     table.insert(stack, { -- remove basedir from source
-      {source.name, removebasedir(src, basedir),
+      {source.name, src,
        linemap and linemap(source.linedefined, source.source) or source.linedefined,
        linemap and linemap(source.currentline, source.source) or source.currentline,
        source.what, source.namewhat, source.short_src},
@@ -638,7 +648,14 @@ local function debug_hook(event, line)
       -- what is the filename and what is the source code.
       -- If the name doesn't start with `@`, assume it's a file name if it's all on one line.
       if find(file, "^@") or not find(file, "[\r\n]") then
-        file = gsub(gsub(file, "^@", ""), "\\", "/")
+        if
+          mobdebug.remote_root_dir
+          and file:find(mobdebug.remote_root_dir, 1, true) == 2
+        then
+          file = (mobdebug.local_root_dir or "")
+            .. file:sub(#mobdebug.remote_root_dir + 2)
+        end
+        file = gsub(gsub(file, "^@", mobdebug.local_root_dir or ""), "\\", "/")
         -- normalize paths that may include up-dir or same-dir references
         -- if the path starts from the up-dir or reference,
         -- prepend `basedir` to generate absolute path to keep breakpoints working.
