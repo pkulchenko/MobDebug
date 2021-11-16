@@ -55,7 +55,8 @@ local MOAICoroutine = rawget(genv, "MOAICoroutine")
 -- methods use a different mechanism that doesn't allow resume calls
 -- from debug hook handlers.
 -- Instead, the "original" coroutine.* methods are used.
-local ngx = rawget(genv, "ngx")
+local metagindex = getmetatable(genv) and getmetatable(genv).__index
+local ngx = rawget(genv, "ngx") or type(metagindex) == "table" and metagindex.rawget and metagindex:rawget("ngx") or nil
 local corocreate = ngx and coroutine._create or coroutine.create
 local cororesume = ngx and coroutine._resume or coroutine.resume
 local coroyield = ngx and coroutine._yield or coroutine.yield
