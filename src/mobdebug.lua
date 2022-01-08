@@ -511,8 +511,8 @@ local function handle_breakpoint(peer)
   if buf:sub(2,2) ~= 'E' then return end
 
   -- need to read few more characters
-  buf = buf .. readnext(peer, 5-#buf)
-  if buf ~= 'SETB ' and buf ~= 'DELB ' then return end
+  if #buf < 5 then buf = buf .. readnext(peer, 5-#buf) end
+  if buf:sub(1,5) ~= 'SETB ' and buf:sub(1,5) ~= 'DELB ' then return end
 
   local res, _, partial = peer:receive("*l") -- get the rest of the line; blocking
   if not res then
