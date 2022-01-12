@@ -28,6 +28,8 @@ local mobdebug = {
   connecttimeout = 2, -- connect timeout (s)
   remote_root_dir = nil,
   local_root_dir = nil,
+  breakpoint_preprocessor = nil,
+  breakpoint_preprocess_unroller = nil,
 }
 
 local HOOKMASK = "lcr"
@@ -361,6 +363,9 @@ end
 local function set_breakpoint(file, line)
   if file == '-' and lastfile then file = lastfile
   elseif iscasepreserving then file = string.lower(file) end
+  if mobdebug.breakpoint_preprocessor then
+    file, line = mobdebug.breakpoint_preprocessor(file, line)
+  end
   if not breakpoints[line] then breakpoints[line] = {} end
   breakpoints[line][file] = true
 end
@@ -369,10 +374,16 @@ local function remove_breakpoint(file, line)
   if file == '-' and lastfile then file = lastfile
   elseif file == '*' and line == 0 then breakpoints = {}
   elseif iscasepreserving then file = string.lower(file) end
+  if mobdebug.breakpoint_preprocessor then
+    file, line = mobdebug.breakpoint_preprocessor(file, line)
+  end
   if breakpoints[line] then breakpoints[line][file] = nil end
 end
 
 local function has_breakpoint(file, line)
+  if mobdebug.breakpoint_preprocessor then
+    file, line = mobdebug.breakpoint_preprocessor(file, line)
+  end
   return breakpoints[line]
      and breakpoints[line][iscasepreserving and string.lower(file) or file]
 end
@@ -711,7 +722,13 @@ local function debug_hook(event, line)
       vars = vars or capture_vars(1)
       step_into = false
       step_over = false
-      status, res = cororesume(coro_debugger, events.BREAK, vars, file, line)
+      local event_file, event_line
+      if mobdebug.breakpoint_preprocess_unroller then
+        event_file, event_line = mobdebug.breakpoint_preprocess_unroller(file, line)
+      else
+        event_file, event_line = file, line
+      end
+      status, res = cororesume(coro_debugger, events.BREAK, vars, event_file, event_line)
     end
 
     -- handle 'stack' command that provides stack() information to the debugger
