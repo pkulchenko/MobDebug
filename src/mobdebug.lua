@@ -1600,9 +1600,9 @@ function vscode_debugger.loop(sev, svars, sfile, sline)
     log('New command: %s', tostring(command))
 
     if command == 'welcome' then
-      -- TODO: set vscode_stop_on_entry via config
-      set_basedir(req.sourceBasePath)
-      vscode_dir_sep = req.directorySeperator
+      set_basedir(args.sourceBasePath)
+      vscode_dir_sep = args.directorySeperator
+      vscode_stop_on_entry = args.stopOnEntry
       vscode_init_failure = false
       -- No response
     elseif command == 'configurationDone' then
