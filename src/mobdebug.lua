@@ -11,25 +11,17 @@ local function prequire(name)
   return ok and m or nil
 end
 
+local socket = require "socket"
 local table = table or require "table"
 local string = string or require "string"
 local coroutine = coroutine or require "coroutine"
+local debug = debug or require "debug"
 
 -- io library does not requreds by debugger itself and may be not accessable
 local io = io or prequire "io"
+
 -- protect require "os" as it may fail on embedded systems without os module
 local os = os or prequire "os"
-
--- patch to work with UServer 6.1.0 +
-local debug = debug do
-  local loader = prequire "module.loader"
-  if loader then
-    debug = assert(loader.debug())
-  end
-end
-
--- load third party library after `module.loader`
-local socket = require "socket"
 
 local mobdebug = {
   _NAME = "mobdebug",
@@ -1894,6 +1886,10 @@ function vscode_debugger.pending_io()
         }
       }
       vscode_debugger.send_success(req, {threads = result})
+    elseif command == 'pause' then
+        state.step_into = true
+        state.step_over = false
+        vscode_debugger.send_success(req, {})
     else
       Log.format('Unsupported pending command: %s', command)
       vscode_debugger.push_back_message(req)
