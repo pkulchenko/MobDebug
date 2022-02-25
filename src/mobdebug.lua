@@ -10,10 +10,13 @@ local function prequire(name)
   local ok, m = pcall(require, name)
   return ok and m or nil
 end
-local io = io or require "io"
+
 local table = table or require "table"
 local string = string or require "string"
 local coroutine = coroutine or require "coroutine"
+
+-- io library does not requreds by debugger itself and may be not accessable
+local io = io or prequire "io"
 -- protect require "os" as it may fail on embedded systems without os module
 local os = os or prequire "os"
 
@@ -38,8 +41,6 @@ local mobdebug = {
   yieldtimeout = 0.02, -- yield timeout (s)
   connecttimeout = 2, -- connect timeout (s)
 }
-
-mobdebug.print = print
 
 local HOOKMASK = "lcr"
 local error = error
@@ -141,6 +142,8 @@ local state = {
     error(deferror)
   end,
   outputs = {},
+  logging = false,
+  logfile = nil,
 }
 
 local server
@@ -294,32 +297,40 @@ return { _NAME = n, _COPYRIGHT = c, _DESCRIPTION = d, _VERSION = v, serialize = 
   block = function(a, opts) return s(a, merge({indent = '  ', sortkeys = true, comment = true}, opts)) end }
 end)() ---- end of Serpent module
 
-local log, tlog, flog do
-  local logging = false
-  local io_open = io.open
-  local io_flush = io.flush or function() end
-  
+local Log = {} do
+  local io_open = io and io.open
+  local io_flush = io and io.flush or function() end
   local table_format_params = {comment = false, nocode = true}
   local function table_format(t)
     return serpent.block(t,table_format_params)
   end
 
-  function log(...)
-    mobdebug.print('[MOBDEBUG]' .. string_format(...))
-    io_flush()
-  end
-
-  function flog(...)
-    if not logging then return end
-    local f = io_open([[d:\projects\vscode-mobdebug\lua\log.txt]], 'a+')
-    if f then
-      f:write('[MOBDEBUG]' .. string_format(...), '\n')
-      f:close()
+  function Log.format(...)
+    if not state.logging then
+      return
     end
+    Log.write('[MOBDEBUG]' .. string_format(...))
   end
 
-  function tlog(name, t)
-    log("%s: %s", name, table_format(t))
+  function Log.table(name, t)
+    if not state.logging then
+      return
+    end
+    Log.format("%s: %s", name, table_format(t))
+  end
+
+  function Log.write(msg)
+    if state.logfile then
+      local f = io_open(state.logfile, 'a+')
+      if f then
+        f:write(msg, '\n')
+        f:close()
+      end
+    end
+    if mobdebug.print then
+      mobdebug.print(msg)
+      io_flush()
+    end
   end
 end
 
@@ -544,7 +555,7 @@ mobdebug.line = serpent.line
 mobdebug.dump = serpent.dump
 mobdebug.linemap = nil
 mobdebug.loadstring = loadstring
-
+mobdebug.print = print
 
 -- path transformations
 --  from source to internal - need to unify file paths getting from debuginfo
@@ -646,7 +657,7 @@ local function set_basedir(dir)
   -- reset cached source as it may change with basedir
   state.lastsource = nil
 
-  log('Base dir: %s', state.basedir)
+  Log.format('Base dir: %s', state.basedir)
 end
 
 local function stack(start)
@@ -925,6 +936,12 @@ local function debug_hook(event, line)
 
     local caller = debug.getinfo(2, "S")
 
+    -- uJIT in case of `ujit -e require'mobdebug'.start()` 
+    -- start execution with this file name - skip it
+    if caller.source == '=(command line)' then
+      return
+    end
+
     -- grab the filename and fix it if needed
     local file = state.lastfile
     if (state.lastsource ~= caller.source) then
@@ -935,7 +952,7 @@ local function debug_hook(event, line)
         file = mobdebug.line(file)
       end
 
-      log('NORM: %s -> %s', state.lastsource, file)
+      Log.format('NORM: %s -> %s', state.lastsource, file)
 
       -- set to true if we got here; this only needs to be done once per
       -- session, so do it here to at least avoid setting it for every line.
@@ -970,7 +987,6 @@ local function debug_hook(event, line)
     )
 
     if getin then
-      log('debug hook interrupted')
       vars = vars or capture_vars(1)
       state.step_into = false
       state.step_over = false
@@ -1103,7 +1119,7 @@ end
 function mobdebug_debugger.parse_breackpoint_command(line)
   local _, _, cmd, file, line_no = string_find(line, "^([A-Z]+)%s+(.-)%s+(%d+)%s*$")
   local local_file = mobdebug_debugger.path_from_ide(file)
-  log('breakpoint path: %s -> %s', file, local_file)
+  Log.format('breakpoint path: %s -> %s', file, local_file)
   return local_file, tonumber(line_no), cmd
 end
 
@@ -1413,7 +1429,7 @@ function mobdebug_debugger.pending_io()
     if cmd == 'SETB' then set_breakpoint(file, line_no)
     elseif cmd == 'DELB' then remove_breakpoint(file, line_no)
     else
-      log("unexpected command: %s", line)
+      Log.format("unexpected command: %s", line)
       -- this looks like a breakpoint command, but something went wrong;
       -- return here to let the "normal" processing to handle,
       -- although this is likely to not go well.
@@ -1597,7 +1613,7 @@ function vscode_debugger.loop(sev, svars, sfile, sline)
     if server.settimeout then server:settimeout() end -- back to blocking
 
     command, args = req.command, req.arguments or {}
-    log('New command: %s', tostring(command))
+    Log.format('New command: %s', tostring(command))
 
     if command == 'welcome' then
       set_basedir(args.sourceBasePath)
@@ -1771,7 +1787,7 @@ function vscode_debugger.loop(sev, svars, sfile, sline)
       if not state.seen_hook then
         vscode_debugger.send_failure(req, "Invalid state")
       else
-        tlog('evaluate', req)
+        Log.table('evaluate', req)
         local chunk = req.arguments.expression
         local func, res = mobdebug.loadstring(string_format('return (%s)', chunk))
         local status
@@ -1785,7 +1801,7 @@ function vscode_debugger.loop(sev, svars, sfile, sline)
           status, res = pcall_vararg_pack(pcall(func, unpack(rawget(env, '...') or {})))
         end
         if status then
-          tlog('res', res)
+          Log.table('res', res)
           -- TODO multiple values
           if res.n == 0 then
             vscode_debugger.send_success(req, {})
@@ -1805,6 +1821,8 @@ function vscode_debugger.loop(sev, svars, sfile, sline)
         else
           -- fix error if not set (for example, when loadstring is not present)
           if not res then res = "Unknown error" end
+          -- Strip error message, implementation from the `handle` function
+          res = string_gsub(res, ".-:%d+:%s*", "")
           vscode_debugger.send_failure(req, res)
         end
       end
@@ -1839,7 +1857,7 @@ function vscode_debugger.loop(sev, svars, sfile, sline)
       coroyield("done")
       return
     else
-      log('Unsupported command: %s', tostring(command or '<UNKNOWN>'))
+      Log.format('Unsupported command: %s', tostring(command or '<UNKNOWN>'))
       vscode_debugger.send_failure(req, 'Unsupported command')
     end -- if command
   end -- while protocol == 'vscode'
@@ -1850,7 +1868,7 @@ function vscode_debugger.pending_io()
   while server:is_pending() do
     local req, err = vscode_debugger.receive_message(false)
     if not req then
-      log('  %s', err or 'unknown')
+      Log.format('  %s', err or 'unknown')
       possible_pending_io = (err == 'timeout')
       break
     end
@@ -1877,7 +1895,7 @@ function vscode_debugger.pending_io()
       }
       vscode_debugger.send_success(req, {threads = result})
     else
-      log('Unsupported pending command: %s', command)
+      Log.format('Unsupported pending command: %s', command)
       vscode_debugger.push_back_message(req)
       return true
     end
@@ -2570,6 +2588,14 @@ mobdebug.yield = nil -- callback
 mobdebug.output = output
 mobdebug.onexit = os and os.exit or done
 mobdebug.onscratch = nil -- callback
-mobdebug.basedir = function(b) if b then state.basedir = b end return state.basedir end
+mobdebug.basedir = function(b)
+  if b then state.basedir = b end
+  return state.basedir
+end
+
+mobdebug.logging = function (on, file)
+  state.logging = on
+  state.logfile = file
+end
 
 return mobdebug
