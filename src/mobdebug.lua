@@ -1389,6 +1389,8 @@ end
 function mobdebug_debugger.pending_io()
   local possible_pending_io = false
   while server:is_pending() do
+    server:enforce_pending_check()
+
     -- check if the buffer has the beginning of SETB/DELB command;
     -- this is to avoid reading the entire line for commands that
     -- don't need to be handled here.
@@ -1858,6 +1860,8 @@ end
 function vscode_debugger.pending_io()
   local possible_pending_io = false
   while server:is_pending() do
+    server:enforce_pending_check()
+
     local req, err = vscode_debugger.receive_message(false)
     if not req then
       Log.format('  %s', err or 'unknown')
