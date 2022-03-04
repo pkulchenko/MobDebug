@@ -1492,7 +1492,7 @@ function vscode_debugger.receive_message(sync)
   end
 
   if not vscode_message_size then
-    local header, err = server:receive_line(sync)
+    local header, err = server:receive_line(sync, sync)
     if not header then
       return nil, err
     end
@@ -1535,7 +1535,7 @@ function vscode_debugger.send_message(msg)
 end
 
 function vscode_debugger.send_success(req, body)
-  vscode_debugger.send_message{
+  vscode_debugger.send_message {
     type        = "response",
     request_seq = req.seq,
     command     = req.command,
@@ -1545,7 +1545,7 @@ function vscode_debugger.send_success(req, body)
 end
 
 function vscode_debugger.send_failure(req, msg)
-  vscode_debugger.send_message{
+  vscode_debugger.send_message {
     type        = "response",
     request_seq = req.seq,
     command     = req.command,
@@ -1555,7 +1555,7 @@ function vscode_debugger.send_failure(req, msg)
 end
 
 function vscode_debugger.send_event(eventName, body)
-  vscode_debugger.send_message{
+  vscode_debugger.send_message {
     type  = "event",
     event = eventName,
     body  = body
@@ -1583,7 +1583,7 @@ function vscode_debugger.send_stop_event(reason)
 end
 
 function vscode_debugger.loop(sev, svars, sfile, sline)
-  local command, arguments
+  local command, args
   local eval_env = svars or {}
   local loaded = {}
   for k in pairs(package.loaded) do loaded[k] = true end
@@ -1782,7 +1782,7 @@ function vscode_debugger.loop(sev, svars, sfile, sline)
         vscode_debugger.send_failure(req, "Invalid state")
       else
         Log.table('evaluate', req)
-        local chunk = req.arguments.expression
+        local chunk = args.expression
         local func, res = mobdebug.loadstring(string_format('return (%s)', chunk))
         local status
         if func then
