@@ -1455,16 +1455,52 @@ local vscode_variables_map
 local vscode_fetched_message
 local vscode_dir_sep
 local vscode_stop_on_entry = false
+local vscode_pathmap
 
 local function pcall_vararg_pack(status, ...)
   if not status then return status, ... end -- on error report as it
   return status, {n = select('#', ...), ...}
 end
 
+-- Motivation:
+-- when deal with the system running in the docker 
+-- file path may differ from the local one.
+-- E.g. in the docker Lua files may be installed via package manager
+-- to the `/var/lib/some_library` directory. But on the 
+-- developers system thouse files placed in the `~/projects/some_library`
+-- As result to be able to debug there needs 
+-- to convert `/var/lib/some_library` to `~/projects/some_library` for step by step debugging
+-- and convert `~/projects/some_library` to `/var/lib/some_library` when set breakpoints
+local fix_file_name do
+  local function isSameAs(f1, f2)
+    return f1 == f2 or iscaseinsensitive and string_lower(f1) == string_lower(f2)
+  end
+
+  local function filePathMatch(file, pattern)
+    return (#file >= #pattern) and isSameAs(string_sub(file, 1, #pattern), pattern)
+  end
+
+  fix_file_name = function(reverse, file)
+    if vscode_pathmap then
+      for _, map in ipairs(vscode_pathmap) do
+        local pattern, substitution = map[reverse and 2 or 1], map[reverse and 1 or 2]
+        if filePathMatch(file, pattern) then
+          file = substitution .. string_sub(file, #pattern + 1)
+          break
+        end
+      end
+    end
+
+    return file
+  end
+end
+
 function vscode_debugger.path_to_ide(file)
   if not is_abs_path(file) then
     file = state.basedir .. file
   end
+
+  file = fix_file_name(false, file)
 
   file = string_gsub(file, '/', vscode_dir_sep)
 
@@ -1473,7 +1509,7 @@ end
 
 function vscode_debugger.path_from_ide(file)
   file = normalize_source_file(file)
-  return file
+  return fix_file_name(true, file)
 end
 
 function vscode_debugger.proto_error(message)
@@ -1613,6 +1649,7 @@ function vscode_debugger.loop(sev, svars, sfile, sline)
       set_basedir(args.sourceBasePath)
       vscode_dir_sep = args.directorySeperator
       vscode_stop_on_entry = args.stopOnEntry
+      vscode_pathmap = args.pathMap
       vscode_init_failure = false
       -- No response
     elseif command == 'configurationDone' then
