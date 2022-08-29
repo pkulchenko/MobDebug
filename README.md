@@ -64,7 +64,7 @@ To enable debugging in coroutines, including triggering of breakpoints, you may 
 (2) add `require('mobdebug').coro()` call to your script, which will enable debugging for all coroutines created using `coroutine.create` later in the script.
 - If you enable coroutine debugging using `require('mobdebug').coro()`, this will **not affect coroutines created using C API** or Lua code wrapped into `coroutine.wrap`.
 You can still debug those fragments after adding `require('mobdebug').on()` to the coroutine code. 
-- The path of the file known to the debugger (the caller of `setb` command) **may not be the same** as the path known to the Lua engine (running the code beng debugged).
+- The path of the file known to the debugger (the caller of `setb` command) **may not be the same** as the path known to the Lua engine (running the code being debugged).
 For example, if you use an embedded engine, you may want to check if the path reported by the engine is normalized (doesn't include `../` references) by checking the result of `debug.getinfo(1,"S").source`.
 - The capitalization of the file known to the debugger **may not be the same** as the capitalization of the file known to the Lua engine with the latter running on a case-sensitive system.
 For example, if you set a breakpoint on the file `TEST.lua` in the debugger running on Window (case-insensitive), it may not fire in the application running `test.lua` on Linux (with case-sensitive file system).
