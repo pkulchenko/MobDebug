@@ -45,7 +45,10 @@ require("mobdebug").start()
 
 ## Installation
 
-Make `src/mobdebug.lua` available to your script.
+Make `src/mobdebug.lua` available to your script:
+- use `luarocks install mobdebug`
+- download the file `src/mobdebug.lua`
+ 
 See `examples/README` and `examples/*.lua` for examples of how to use the module.
 
 ## Dependencies
