@@ -19,7 +19,7 @@ end)("os")
 
 local mobdebug = {
   _NAME = "mobdebug",
-  _VERSION = "0.803",
+  _VERSION = "0.804",
   _COPYRIGHT = "Paul Kulchenko",
   _DESCRIPTION = "Mobile Remote Debugger for the Lua programming language",
   port = os and os.getenv and tonumber((os.getenv("MOBDEBUG_PORT"))) or 8172,
@@ -73,6 +73,7 @@ if not setfenv then -- Lua 5.2+
   -- based on http://lua-users.org/lists/lua-l/2010-06/msg00314.html
   -- this assumes f is a function
   local function findenv(f)
+    if not debug.getupvalue then return nil end
     local level = 1
     repeat
       local name, value = debug.getupvalue(f, level)
@@ -317,7 +318,7 @@ local function stack(start)
     -- get upvalues
     i = 1
     local ups = {}
-    while func do -- check for func as it may be nil for tail calls
+    while func and debug.getupvalue do -- check for func as it may be nil for tail calls
       local name, value = debug.getupvalue(func, i)
       if not name then break end
       ups[name] = {value, select(2,pcall(tostring,value))}
@@ -397,7 +398,7 @@ local function restore_vars(vars)
 
   i = 1
   local func = debug.getinfo(3, "f").func
-  while true do
+  while debug.getupvalue do
     local name = debug.getupvalue(func, i)
     if not name then break end
     if not written_vars[name] then
@@ -417,7 +418,7 @@ local function capture_vars(level, thread)
 
   local vars = {['...'] = {}}
   local i = 1
-  while true do
+  while debug.getupvalue do
     local name, value = debug.getupvalue(func, i)
     if not name then break end
     if string.sub(name, 1, 1) ~= '(' then vars[name] = value end
