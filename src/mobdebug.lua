@@ -502,6 +502,16 @@ local function is_pending(peer)
   return buf
 end
 
+local function buffer_append(data)
+  if data and data ~= '' then
+    if buf then
+      buf = buf .. data
+    else
+      buf = data
+    end
+  end
+end
+
 local function readnext(peer, num)
   peer:settimeout(0) -- non-blocking
   local res, err, partial = peer:receive(num)
@@ -525,7 +535,7 @@ local function handle_breakpoint(peer)
 
   local res, _, partial = peer:receive("*l") -- get the rest of the line; blocking
   if not res then
-    if partial then buf = buf .. partial end
+    buffer_append(partial)
     return
   end
 
@@ -780,8 +790,10 @@ local function debugger_loop(sev, svars, sfile, sline)
     local line, err
     if mobdebug.yield and server.settimeout then server:settimeout(mobdebug.yieldtimeout) end
     while true do
-      line, err = server:receive("*l")
+      local partial
+      line, err, partial = server:receive("*l")
       if not line then
+        buffer_append(partial)
         if err == "timeout" then
           if mobdebug.yield then mobdebug.yield() end
         elseif err == "closed" then
@@ -795,6 +807,7 @@ local function debugger_loop(sev, svars, sfile, sline)
         break
       end
     end
+
     if server.settimeout then server:settimeout() end -- back to blocking
     command = string.sub(line, string.find(line, "^[A-Z]+"))
     if command == "SETB" then
