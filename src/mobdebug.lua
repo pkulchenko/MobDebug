@@ -26,6 +26,8 @@ local mobdebug = {
   checkcount = 200,
   yieldtimeout = 0.02, -- yield timeout (s)
   connecttimeout = 2, -- connect timeout (s)
+  printline = false,
+  printhook = false,
 }
 
 local HOOKMASK = "lcr"
@@ -559,6 +561,10 @@ local function normalize_path(file)
 end
 
 local function debug_hook(event, line)
+  if mobdebug.printhook then
+    print('hook', event, line, debug.getinfo(2, "S").source)
+  end
+
   -- (1) LuaJIT needs special treatment. Because debug_hook is set for
   -- *all* coroutines, and not just the one being debugged as in regular Lua
   -- (http://lua-users.org/lists/lua-l/2011-06/msg00513.html),
@@ -796,6 +802,9 @@ local function debugger_loop(sev, svars, sfile, sline)
       end
     end
     if server.settimeout then server:settimeout() end -- back to blocking
+    if mobdebug.printline then
+      print('line:', line)
+    end
     command = string.sub(line, string.find(line, "^[A-Z]+"))
     if command == "SETB" then
       local _, _, _, file, line = string.find(line, "^([A-Z]+)%s+(.-)%s+(%d+)%s*$")
