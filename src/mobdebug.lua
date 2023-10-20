@@ -796,8 +796,11 @@ local function debugger_loop(sev, svars, sfile, sline)
       end
     end
     if server.settimeout then server:settimeout() end -- back to blocking
-    command = string.sub(line, string.find(line, "^[A-Z]+"))
-    if command == "SETB" then
+    local status
+    status, command = pcall(string.sub, line, string.find(line, "^[A-Z]+"))
+    if not status then
+      print('error getting the command')
+    elseif command == "SETB" then
       local _, _, _, file, line = string.find(line, "^([A-Z]+)%s+(.-)%s+(%d+)%s*$")
       if file and line then
         set_breakpoint(file, tonumber(line))
