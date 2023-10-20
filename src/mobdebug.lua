@@ -124,6 +124,8 @@ local stack_level = 0
 local SAFEWS = "\012" -- "safe" whitespace value
 local server
 local buf
+local start_input_line
+local start_input_error
 local outputs = {}
 local iobase = {print = print}
 local basedir = ""
@@ -780,7 +782,13 @@ local function debugger_loop(sev, svars, sfile, sline)
     local line, err
     if mobdebug.yield and server.settimeout then server:settimeout(mobdebug.yieldtimeout) end
     while true do
-      line, err = server:receive("*l")
+      if start_input_line then
+        line, err = start_input_line, start_input_error
+        start_input_line = nil
+        start_input_error = nil
+      else
+        line, err = server:receive("*l")
+      end
       if not line then
         if err == "timeout" then
           if mobdebug.yield then mobdebug.yield() end
@@ -1073,6 +1081,10 @@ local function start(controller_host, controller_port)
   local err
   server, err = mobdebug.connect(controller_host, controller_port)
   if server then
+    local line, receive_err = server:receive("*l")
+    start_input_line = line
+    start_input_error = receive_err
+
     -- correct stack depth which already has some calls on it
     -- so it doesn't go into negative when those calls return
     -- as this breaks subsequence checks in stack_depth().
